@@ -1,0 +1,17 @@
+.make-sentinels
+.vscode
+.vscode/
+.installed.txt
+*-mxdev.txt
+venv/
+etc/
+var/
+instance/
+sources/
+node_modules/
+pip-selfcheck.json
+*.egg-info
+*.log
+*.mo
+*.py?
+*.swp

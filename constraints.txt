@@ -1,0 +1,2 @@
+-c https://dist.plone.org/release/6.0.5/constraints.txt
+python3-saml == 1.15.0
