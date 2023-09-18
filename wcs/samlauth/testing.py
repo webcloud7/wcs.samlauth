@@ -21,6 +21,7 @@ import sys
 import time
 import transaction
 import requests
+import json
 
 
 MAX_CONNECTION_RETRIES = 20
@@ -112,7 +113,7 @@ class BaseDockerServiceLayer(Layer):
         if self.command:
             arguments.append(self.command)
         result = self._run_docker_command(arguments)
-        LOGGER.info (f'Created {self.name} container: {self.container_name} ({result.stdout})')
+        LOGGER.info(f'Created {self.name} container: {self.container_name} ({result.stdout})')
 
     def is_docker_container_available(self):
         result = self._run_docker_command(
@@ -144,6 +145,54 @@ class KeyCloakLayer(BaseDockerServiceLayer):
         'KC_METRICS_ENABLED': 'true'
     }
     command = 'start-dev'
+    admin_session = None
+
+    def setUp(self):
+        super().setUp()
+        self.admin_session = requests.Session()
+        self.admin_session.headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
+        self._configure()
+        self._create_realm()
+
+    def tearDown(self):
+        self._delete_realm()
+        super().tearDown()
+
+    def _configure(self):
+        # Import realm
+        access_token = requests.post(
+            'http://localhost:8000/realms/master/protocol/openid-connect/token',
+            data={'username': 'admin',
+                  'password': 'admin',
+                  'grant_type': 'password',
+                  'client_id': 'admin-cli'}
+        ).json()['access_token']
+
+        self.admin_session.headers.update({'Authorization': f'Bearer {access_token}'})
+
+    def _create_realm(self):
+        filename = os.path.join(os.path.dirname(__file__), 'tests', 'assets', 'saml-test-realm.json')
+        realm_data = None
+        with open(filename, "rb") as f:
+            realm_data = f.read()
+            port = os.environ.get('WSGI_SERVER_PORT', '65035')
+            realm_data_str = realm_data.decode('utf-8')
+            realm_data_str.replace('http://localhost:8080/plone', f'http://localhost:{port}/plone')
+            realm_data = realm_data_str.encode('utf-8')
+
+        self.admin_session.headers.update({'Content-Type': 'application/json'})
+        response = self.admin_session.post(
+            'http://localhost:8000/admin/realms',
+            data=realm_data
+        )
+        assert response.status_code == 201, 'Realm not created'
+
+    def _delete_realm(self):
+        self.admin_session.headers.update({'Content-Type': 'application/json'})
+        response = self.admin_session.delete(
+            'http://localhost:8000/admin/realms/saml-test'
+        )
+        assert response.status_code == 204, 'Realm not deleted'
 
     def _wait_for_service(self):
         counter = 0
@@ -188,5 +237,5 @@ class SAMLAuthLayer(PloneSandboxLayer):
 
 SAMLAUTH_FIXTURE = SAMLAuthLayer()
 SAMLAUTH_FUNCTIONAL_TESTING = FunctionalTesting(
-    bases=(KEYCLOAK_FIXTURE,  SAMLAUTH_FIXTURE, WSGI_SERVER_FIXTURE, ),
+    bases=(KEYCLOAK_FIXTURE, SAMLAUTH_FIXTURE, WSGI_SERVER_FIXTURE, ),
     name='SAMLAuth:Functional')
