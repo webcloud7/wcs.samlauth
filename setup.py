@@ -13,9 +13,9 @@ tests_require = [
     "plone.app.testing",
     "plone.testing",
     "plone.api",
-    "ftw.testbrowser",
     "zope.testrunner",
-    "requests"
+    "requests",
+    "beautifulsoup4",
 ]
 
 setup(

@@ -1,0 +1,43 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:plone="http://namespaces.plone.org/plone"
+    i18n_domain="wcs.samlauth">
+
+  <browser:page
+      for="wcs.samlauth.plugin.ISamlAuthPlugin"
+      name="sls"
+      class=".views.LoginView"
+      permission="zope2.View"
+      />
+
+  <browser:page
+      for="wcs.samlauth.plugin.ISamlAuthPlugin"
+      name="acs"
+      class=".views.CallbackView"
+      permission="zope2.View"
+      />
+
+  <browser:page
+      for="wcs.samlauth.plugin.ISamlAuthPlugin"
+      name="slo"
+      class=".views.LogoutView"
+      permission="zope2.View"
+      />
+
+    <browser:page
+      for="wcs.samlauth.plugin.ISamlAuthPlugin"
+      name="metadata"
+      class=".views.MetadataView"
+      permission="zope2.View"
+      />
+
+<!--   <browser:page
+      for="wcs.samlauth.plugin.ISamlAuthPlugin"
+      name="require_login"
+      class=".view.RequireLoginView"
+      permission="zope2.View"
+      />
+ -->
+
+</configure>

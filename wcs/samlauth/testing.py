@@ -171,6 +171,14 @@ class KeyCloakLayer(BaseDockerServiceLayer):
         self.admin_session.headers.update({'Authorization': f'Bearer {access_token}'})
 
     def _create_realm(self):
+        self.admin_session.headers.update({'Content-Type': 'application/json'})
+
+        response = self.admin_session.get(
+            'http://localhost:8000/admin/realms/saml-test'
+        )
+        if response.status_code == 200:
+            self._delete_realm()
+
         filename = os.path.join(os.path.dirname(__file__), 'tests', 'assets', 'saml-test-realm.json')
         realm_data = None
         with open(filename, "rb") as f:
@@ -180,7 +188,6 @@ class KeyCloakLayer(BaseDockerServiceLayer):
             realm_data_str.replace('http://localhost:8080/plone', f'http://localhost:{port}/plone')
             realm_data = realm_data_str.encode('utf-8')
 
-        self.admin_session.headers.update({'Content-Type': 'application/json'})
         response = self.admin_session.post(
             'http://localhost:8000/admin/realms',
             data=realm_data

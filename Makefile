@@ -288,7 +288,7 @@ run: ${RUN_PREREQUISITES} ## run/start Plone
 clean-venv: ## remove Python virtual environment
 ifeq ("${VENV}", "on")
 	@echo "$(OK_COLOR)Remove Virtualenv.$(NO_COLOR)"
-	rm -rf ${VENV_FOLDER} ${SENTINELFOLDER}/pip*.sentinel ${VENV_SENTINEL}
+	rm -rf ${VENV_FOLDER}/bin ${VENV_FOLDER}/include ${VENV_FOLDER}/lib ${SENTINELFOLDER}/pip*.sentinel ${VENV_SENTINEL}
 else:
 	@echo "$(OK_WARN)No self-created Python virtualenv at '${VENV_FOLDER}'! Nothing to do.$(NO_COLOR)"
 endif
