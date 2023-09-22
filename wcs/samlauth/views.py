@@ -1,4 +1,3 @@
-from json import JSONDecodeError
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from plone import api
 from Products.Five.browser import BrowserView
@@ -34,8 +33,13 @@ class BaseSamlView(BrowserView):
         }
 
     def _load_settings(self):
-        clean = clean_for_json(self.context.getProperty('settings'))
-        settings = json.loads(clean)
+        settings_clean = clean_for_json(self.context.getProperty('settings'))
+        settings_sp_clean = clean_for_json(self.context.getProperty('settings_sp'))
+        settings_idp_clean = clean_for_json(self.context.getProperty('settings_idp'))
+
+        settings = json.loads(settings_clean)
+        settings.update(json.loads(settings_sp_clean))
+        settings.update(json.loads(settings_idp_clean))
         
         # advanced_settings = json.loads(self.context.getProperty('advanced'))
         # settings.update(advanced_settings)

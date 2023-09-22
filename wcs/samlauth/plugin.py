@@ -12,6 +12,8 @@ from Products.PluggableAuthService.utils import classImplements
 from secrets import choice
 from wcs.samlauth.default_settings import ADVANCED_SETTINGS
 from wcs.samlauth.default_settings import DEFAULT_SETTINGS
+from wcs.samlauth.default_settings import DEFAULT_SP_SETTINGS
+from wcs.samlauth.default_settings import DEFAULT_IDP_SETTINGS
 from ZODB.POSException import ConflictError
 from zope.interface import Interface
 import itertools
@@ -58,6 +60,8 @@ class SamlAuthPlugin(BasePlugin):
     create_api_session = False
     create_user = True
     settings = DEFAULT_SETTINGS
+    settings_sp = DEFAULT_SP_SETTINGS
+    settings_idp = DEFAULT_IDP_SETTINGS
     advanced = ADVANCED_SETTINGS
 
     _properties = (
@@ -65,6 +69,8 @@ class SamlAuthPlugin(BasePlugin):
         dict(id='create_api_session', label='Create API Session', type='bool', mode='w'),
         dict(id='create_user', label='Create User', type='bool', mode='w'),
         dict(id='settings', label='Settings', type='text', mode='w'),
+        dict(id='settings_sp', label='Settings', type='text', mode='w'),
+        dict(id='settings_idp', label='Settings', type='text', mode='w'),
         dict(id='advanced', label='Advanced', type='text', mode='w'),
     )
 

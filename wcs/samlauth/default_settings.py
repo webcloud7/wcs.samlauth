@@ -7,9 +7,12 @@ DEFAULT_SETTINGS = """
     "strict": "true",
 
     // Enable debug mode (outputs errors).
-    "debug": "true",
+    "debug": "true"
+} 
+"""
 
-    // Service Provider Data that we are deploying.
+DEFAULT_SP_SETTINGS = """
+{
     "sp": {
         // Identifier of the SP entity  (must be a URI) - 
         "entityId": "https://<sp_domain>/metadata/",
@@ -73,8 +76,12 @@ DEFAULT_SETTINGS = """
          * read them and get ready for rollover.
          */
         // 'x509certNew': '',
-    },
+    }
+}
+"""
 
+DEFAULT_IDP_SETTINGS = """
+{
     // Identity Provider Data that we want connected with our SP.
     "idp": {
         // Identifier of the IdP entity  (must be a URI)
