@@ -1,7 +1,6 @@
 from plone import api
 from wcs.samlauth.plugin import SamlAuthPlugin
 import logging
-import io
 
 
 LOGGER = logging.getLogger(__name__)
@@ -16,9 +15,9 @@ def install_plugin():
     # Create plugin if it does not exist.
     if PLUGIN_ID not in pas.objectIds():
         plugin = SamlAuthPlugin(
+            id_=PLUGIN_ID,
             title="SAML",
         )
-        plugin.id = PLUGIN_ID
         pas._setObject(PLUGIN_ID, plugin)
         LOGGER.info("Created %s in acl_users.", PLUGIN_ID)
     plugin = getattr(pas, PLUGIN_ID)
@@ -49,22 +48,3 @@ def install_plugin():
             LOGGER.info("Moved %s to top of %s.", PLUGIN_ID, interface_name)
 
     return plugin
-
-
-def clean_for_json(data):
-
-    cleaned_json = ''
-    file_ = io.StringIO()
-    file_.write(data)
-    file_.seek(0)
-    for line_raw in file_.readlines():
-        line = line_raw.strip()
-        if line.startswith('//'):
-            continue
-        elif line.startswith('/*'):
-            continue
-        elif line.startswith('*'):
-            continue
-        else:
-            cleaned_json += line
-    return cleaned_json

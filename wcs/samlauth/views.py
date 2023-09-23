@@ -2,9 +2,7 @@ from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from plone import api
 from Products.Five.browser import BrowserView
 from urllib.parse import urlparse
-from wcs.samlauth.utils import clean_for_json
 from zExceptions import BadRequest
-import json
 import logging
 
 
@@ -33,17 +31,7 @@ class BaseSamlView(BrowserView):
         }
 
     def _load_settings(self):
-        settings_clean = clean_for_json(self.context.getProperty('settings'))
-        settings_sp_clean = clean_for_json(self.context.getProperty('settings_sp'))
-        settings_idp_clean = clean_for_json(self.context.getProperty('settings_idp'))
-
-        settings = json.loads(settings_clean)
-        settings.update(json.loads(settings_sp_clean))
-        settings.update(json.loads(settings_idp_clean))
-        
-        # advanced_settings = json.loads(self.context.getProperty('advanced'))
-        # settings.update(advanced_settings)
-        return settings
+        return self.context.load_and_clean_settings()
 
     def _update_settings(self):
         """Update SP settings with dynamic values"""

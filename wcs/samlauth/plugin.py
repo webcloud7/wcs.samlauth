@@ -1,6 +1,8 @@
 from AccessControl.class_init import InitializeClass
 from AccessControl.SecurityInfo import ClassSecurityInfo
 from contextlib import contextmanager
+from copy import deepcopy
+from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 from plone import api
 from plone.protect.utils import safeWrite
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
@@ -11,14 +13,16 @@ from Products.PluggableAuthService.plugins.BasePlugin import BasePlugin
 from Products.PluggableAuthService.utils import classImplements
 from secrets import choice
 from wcs.samlauth.default_settings import ADVANCED_SETTINGS
+from wcs.samlauth.default_settings import DEFAULT_IDP_SETTINGS
 from wcs.samlauth.default_settings import DEFAULT_SETTINGS
 from wcs.samlauth.default_settings import DEFAULT_SP_SETTINGS
-from wcs.samlauth.default_settings import DEFAULT_IDP_SETTINGS
 from ZODB.POSException import ConflictError
 from zope.interface import Interface
 import itertools
+import json
 import logging
 import string
+import io
 
 logger = logging.getLogger(__name__)
 PWCHARS = string.ascii_letters + string.digits + string.punctuation
@@ -36,7 +40,23 @@ def manage_addSamlAuthPlugin(self, id_, title='', RESPONSE=None):
         RESPONSE.redirect("manage_workspace")
 
 
+def clean_for_json(data):
 
+    cleaned_json = ''
+    file_ = io.StringIO()
+    file_.write(data)
+    file_.seek(0)
+    for line_raw in file_.readlines():
+        line = line_raw.strip()
+        if line.startswith('//'):
+            continue
+        elif line.startswith('/*'):
+            continue
+        elif line.startswith('*'):
+            continue
+        else:
+            cleaned_json += line
+    return cleaned_json
 
 
 class ISamlAuthPlugin(Interface):
@@ -59,14 +79,18 @@ class SamlAuthPlugin(BasePlugin):
     advanced = ADVANCED_SETTINGS
 
     _properties = (
-        dict(id='create_session', label='Create Plone Session', type='bool', mode='w'),
-        dict(id='create_api_session', label='Create API Session', type='bool', mode='w'),
-        dict(id='create_user', label='Create User', type='bool', mode='w'),
+        dict(id='create_session', label='Create Plone Session', type='boolean', mode='w'),
+        dict(id='create_api_session', label='Create API Session', type='boolean', mode='w'),
+        dict(id='create_user', label='Create User', type='boolean', mode='w'),
         dict(id='settings', label='Settings', type='text', mode='w'),
         dict(id='settings_sp', label='Settings', type='text', mode='w'),
         dict(id='settings_idp', label='Settings', type='text', mode='w'),
         dict(id='advanced', label='Advanced', type='text', mode='w'),
     )
+
+    def __init__(self, id_, title=None):
+        self._setId(id_)
+        self.title = title
 
     def remember_identity(self, auth):
         user_id = auth.get_nameid()
@@ -180,6 +204,31 @@ class SamlAuthPlugin(BasePlugin):
             response = request["RESPONSE"]
             # TODO: take care of path, cookiename and domain options ?
             response.setCookie("auth_token", token, path="/")
+
+    def _fetch_metadata(self, url):
+        idp_data = OneLogin_Saml2_IdPMetadataParser.parse_remote(url)
+        return idp_data
+
+    def _update_metadata(self, new_data):
+        settings = self.load_and_clean_settings()
+        merged_data = OneLogin_Saml2_IdPMetadataParser.merge_settings(
+            settings, new_data
+        )
+
+        return merged_data
+
+    def load_and_clean_settings(self):
+        settings_clean = clean_for_json(self.getProperty('settings'))
+        settings_sp_clean = clean_for_json(self.getProperty('settings_sp'))
+        settings_idp_clean = clean_for_json(self.getProperty('settings_idp'))
+
+        settings = json.loads(settings_clean)
+        settings.update(json.loads(settings_sp_clean))
+        settings.update(json.loads(settings_idp_clean))
+        
+        # advanced_settings = json.loads(self.getProperty('advanced'))
+        # settings.update(advanced_settings)
+        return settings
 
     def challenge(self, request, response):
         """Assert via the response that credentials will be gathered.

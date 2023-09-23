@@ -19,9 +19,7 @@ import shutil
 import subprocess
 import sys
 import time
-import transaction
 import requests
-import json
 
 
 MAX_CONNECTION_RETRIES = 20
