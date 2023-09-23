@@ -1,0 +1,71 @@
+<h1 tal:replace="structure here/manage_page_header">Header</h1>
+
+<h2>Add SAML auth plugin</h2>
+
+<p class="form-help">
+  wcs.samlauth
+</p>
+
+<form action="manage_addSamlAuthPlugin"
+      enctype="multipart/form-data"
+      method="post"
+>
+  <table border="0"
+         cellpadding="2"
+         cellspacing="0"
+  >
+    <tr>
+      <td align="left"
+          valign="top"
+      >
+        <div class="form-label">
+          Id
+        </div>
+      </td>
+      <td align="left"
+          valign="top"
+      >
+        <input name="id_"
+               size="40"
+               type="text"
+        />
+      </td>
+    </tr>
+    <tr>
+      <td align="left"
+          valign="top"
+      >
+        <div class="form-optional">
+          Title
+        </div>
+      </td>
+      <td align="left"
+          valign="top"
+      >
+        <input name="title"
+               size="40"
+               type="text"
+        />
+      </td>
+    </tr>
+    <tr>
+      <td align="left"
+          valign="top"
+      >
+      </td>
+      <td align="left"
+          valign="top"
+      >
+        <div class="form-element">
+          <input class="form-element"
+                 name="submit"
+                 type="submit"
+                 value=" Add "
+          />
+        </div>
+      </td>
+    </tr>
+  </table>
+</form>
+
+<h1 tal:replace="structure here/manage_page_footer">Footer</h1>

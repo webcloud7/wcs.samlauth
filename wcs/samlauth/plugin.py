@@ -21,28 +21,22 @@ import logging
 import string
 
 logger = logging.getLogger(__name__)
-
-
-manage_addSamlAuthPlugin = PageTemplateFile(
-    "www/addPlugin",
-    globals(),
-    __name__="manage_addSamlAuthPlugin",
-)
-
-
 PWCHARS = string.ascii_letters + string.digits + string.punctuation
 
+manage_addSamlAuthPluginForm = PageTemplateFile("templates/add_plugin", globals())
 
-def addSamlAuthPlugin(self, id_, title='', REQUEST=None):
+
+def manage_addSamlAuthPlugin(self, id_, title='', RESPONSE=None):
     """Add a Saml2 Auth plugin.
     """
-    p = SamlAuthPlugin(id_, title)
-    self._setObject(p.getId(), p)
+    plugin = SamlAuthPlugin(id_, title)
+    self._setObject(plugin.getId(), plugin)
 
-    if REQUEST is not None:
-        REQUEST["RESPONSE"].redirect(
-            "%s/manage_workspace?manage_tabs_message=Saml+Auth+plugin+"
-            "added." % self.absolute_url())
+    if RESPONSE is not None:
+        RESPONSE.redirect("manage_workspace")
+
+
+
 
 
 class ISamlAuthPlugin(Interface):

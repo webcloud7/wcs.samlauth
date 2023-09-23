@@ -2,23 +2,26 @@
     xmlns="http://namespaces.zope.org/zope"
     xmlns:browser="http://namespaces.zope.org/browser"
     xmlns:plone="http://namespaces.plone.org/plone"
+    xmlns:five="http://namespaces.zope.org/five"
     i18n_domain="wcs.samlauth">
 
-  <browser:page
+    <five:registerPackage package="." initialize=".initialize" />
+
+    <browser:page
       for="wcs.samlauth.plugin.ISamlAuthPlugin"
       name="sls"
       class=".views.LoginView"
       permission="zope2.View"
       />
 
-  <browser:page
+    <browser:page
       for="wcs.samlauth.plugin.ISamlAuthPlugin"
       name="acs"
       class=".views.CallbackView"
       permission="zope2.View"
       />
 
-  <browser:page
+    <browser:page
       for="wcs.samlauth.plugin.ISamlAuthPlugin"
       name="slo"
       class=".views.LogoutView"
