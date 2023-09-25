@@ -107,3 +107,22 @@ class TestIdpMetadata(FunctionalTesting):
 
         self.assertEqual(sp_data['NameIDFormat'],
                          metadata['sp']['NameIDFormat'])
+
+    def test_advanced_settings_are_updated(self):
+        """ Keycloak by default sends WantAuthnRequestsSigned=true, which needs
+        to be reflected in the security part. We want to handle this manually.
+        So check for no changes there
+        """
+        metadata = self.plugin.load_and_clean_settings()
+        old_value = metadata['security']['authnRequestsSigned']
+        self.assertFalse(old_value, 'Old value should be false')
+
+        self.browser.open(self.plugin.absolute_url() + '/idp_metadata')
+        self.browser.getControl(
+            name='form.widgets.metadata_url').value = self.idp_metadata_url
+        self.browser.getControl(name='form.buttons.get_and_store').click()
+
+        self.assertFalse(
+            self.plugin.load_and_clean_settings()['security']['authnRequestsSigned'],
+            'New value should be false as well.'
+        )

@@ -1,7 +1,6 @@
 from AccessControl.class_init import InitializeClass
 from AccessControl.SecurityInfo import ClassSecurityInfo
 from contextlib import contextmanager
-from copy import deepcopy
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 from plone import api
 from plone.protect.utils import safeWrite
@@ -14,7 +13,6 @@ from Products.PluggableAuthService.utils import classImplements
 from secrets import choice
 from wcs.samlauth.default_settings import ADVANCED_SETTINGS
 from wcs.samlauth.default_settings import DEFAULT_IDP_SETTINGS
-from wcs.samlauth.default_settings import DEFAULT_SETTINGS
 from wcs.samlauth.default_settings import DEFAULT_SP_SETTINGS
 from ZODB.POSException import ConflictError
 from zope.interface import Interface
@@ -55,8 +53,18 @@ def clean_for_json(data):
         elif line.startswith('*'):
             continue
         else:
+            line = line.replace('"true"', 'true').replace("'true'", "true")
+            line = line.replace('"false"', 'false').replace("'false'", "false")
             cleaned_json += line
     return cleaned_json
+
+
+def make_string(element):
+    if isinstance(element, str):
+        return element
+    elif isinstance(element, list):
+        return ''.join(element)
+    return None
 
 
 class ISamlAuthPlugin(Interface):
@@ -73,16 +81,14 @@ class SamlAuthPlugin(BasePlugin):
     create_session = True
     create_api_session = False
     create_user = True
-    settings = DEFAULT_SETTINGS
-    settings_sp = DEFAULT_SP_SETTINGS
-    settings_idp = DEFAULT_IDP_SETTINGS
-    advanced = ADVANCED_SETTINGS
+    settings_sp = json.dumps(json.loads(clean_for_json(DEFAULT_SP_SETTINGS)), indent=4)
+    settings_idp = json.dumps(json.loads(clean_for_json(DEFAULT_IDP_SETTINGS)), indent=4)
+    advanced = json.dumps(json.loads(clean_for_json(ADVANCED_SETTINGS)), indent=4)
 
     _properties = (
         dict(id='create_session', label='Create Plone Session', type='boolean', mode='w'),
         dict(id='create_api_session', label='Create API Session', type='boolean', mode='w'),
         dict(id='create_user', label='Create User', type='boolean', mode='w'),
-        dict(id='settings', label='Settings', type='text', mode='w'),
         dict(id='settings_sp', label='Settings', type='text', mode='w'),
         dict(id='settings_idp', label='Settings', type='text', mode='w'),
         dict(id='advanced', label='Advanced', type='text', mode='w'),
@@ -94,7 +100,7 @@ class SamlAuthPlugin(BasePlugin):
 
     def remember_identity(self, auth):
         user_id = auth.get_nameid()
-        userinfo = auth.get_attributes()
+        userinfo = auth.get_friendlyname_attributes()
         pas = self._getPAS()
         if pas is None:
             return
@@ -144,21 +150,19 @@ class SamlAuthPlugin(BasePlugin):
         This is utilised when first creating a user, and to update
         their information when logging in again later.
         """
-        # TODO: modificare solo se ci sono dei cambiamenti sui dati ?
-        # TODO: mettere in config il mapping tra metadati che arrivano da oidc e properties su plone
-        # TODO: warning nel caso non vengono tornati dati dell'utente
+
         userProps = {}
         if "email" in userinfo:
-            userProps["email"] = userinfo["email"]
-        if "given_name" in userinfo and "family_name" in userinfo:
+            userProps["email"] = make_string(userinfo["email"])
+        if "givenName" in userinfo and "surname" in userinfo:
             userProps["fullname"] = "{} {}".format(
-                userinfo["given_name"], userinfo["family_name"]
+                make_string(userinfo["givenName"]), make_string(userinfo["surname"])
             )
-        elif "name" in userinfo and "family_name" in userinfo:
+        elif "name" in userinfo and "surname" in userinfo:
             userProps["fullname"] = "{} {}".format(
-                userinfo["name"], userinfo["family_name"]
+                make_string(userinfo["name"]), make_string(userinfo["surname"])
             )
-        # userProps[LAST_UPDATE_USER_PROPERTY_KEY] = time.time()
+
         if userProps:
             user.setProperties(**userProps)
 
@@ -218,22 +222,22 @@ class SamlAuthPlugin(BasePlugin):
         return merged_data
 
     def load_and_clean_settings(self):
-        settings_clean = clean_for_json(self.getProperty('settings'))
+        advanced_settings = clean_for_json(self.getProperty('advanced'))
         settings_sp_clean = clean_for_json(self.getProperty('settings_sp'))
         settings_idp_clean = clean_for_json(self.getProperty('settings_idp'))
-        advanced_settings = clean_for_json(self.getProperty('advanced'))
 
-        settings = json.loads(settings_clean)
+        settings = json.loads(advanced_settings)
         settings.update(json.loads(settings_sp_clean))
         settings.update(json.loads(settings_idp_clean))
-        settings.update(json.loads(advanced_settings))
         return settings
 
     def store(self, metadata):
+        settings_idp = metadata.pop('idp')
+        settings_sp = metadata.pop('sp')
         self.manage_changeProperties(
             **{
-                'settings_idp': json.dumps({'idp': metadata['idp']}, indent=4),
-                'settings_sp': json.dumps({'sp': metadata['sp']}, indent=4),
+                'settings_idp': json.dumps({'idp': settings_idp}, indent=4),
+                'settings_sp': json.dumps({'sp': settings_sp}, indent=4),
             }
         )
 

@@ -1,16 +1,3 @@
-DEFAULT_SETTINGS = """
-{
-    // If strict is True, then the Python Toolkit will reject unsigned
-    // or unencrypted messages if it expects them to be signed or encrypted.
-    // Also it will reject the messages if the SAML standard is not strictly
-    // followed. Destination, NameId, Conditions ... are validated too.
-    "strict": "true",
-
-    // Enable debug mode (outputs errors).
-    "debug": "true"
-} 
-"""
-
 DEFAULT_SP_SETTINGS = """
 {
     "sp": {
@@ -52,7 +39,7 @@ DEFAULT_SP_SETTINGS = """
                 //"requestedAttributes": [
                 //   {
                 //      "name": "",
-                //        "isRequired": "false",
+                //        "isRequired": false,
                 //        "nameFormat": "",
                 //        "friendlyName": "",
                 //        "attributeValue": []
@@ -151,6 +138,15 @@ DEFAULT_IDP_SETTINGS = """
 
 ADVANCED_SETTINGS = """
 {
+    // If strict is True, then the Python Toolkit will reject unsigned
+    // or unencrypted messages if it expects them to be signed or encrypted.
+    // Also it will reject the messages if the SAML standard is not strictly
+    // followed. Destination, NameId, Conditions ... are validated too.
+    "strict": true,
+
+    // Enable debug mode (outputs errors).
+    "debug": true,
+
     // Security settings
     "security": {
 
@@ -158,19 +154,19 @@ ADVANCED_SETTINGS = """
 
         // Indicates that the nameID of the <samlp:logoutRequest> sent by this SP
         // will be encrypted.
-        "nameIdEncrypted": "false",
+        "nameIdEncrypted": false,
 
         // Indicates whether the <samlp:AuthnRequest> messages sent by this SP
         // will be signed.  [Metadata of the SP will offer this info]
-        "authnRequestsSigned": "false",
+        "authnRequestsSigned": false,
 
         // Indicates whether the <samlp:logoutRequest> messages sent by this SP
         // will be signed.
-        "logoutRequestSigned": "false",
+        "logoutRequestSigned": false,
 
         // Indicates whether the <samlp:logoutResponse> messages sent by this SP
         // will be signed.
-        "logoutResponseSigned": "false",
+        "logoutResponseSigned": false,
 
         /* Sign the Metadata
          * false || true (use sp certs) || {
@@ -178,53 +174,53 @@ ADVANCED_SETTINGS = """
          *                                    "certFileName": "metadata.crt"
          *                                 }
         */
-        "signMetadata": "false",
+        "signMetadata": false,
 
         /** signatures and encryptions required **/
 
         // Indicates a requirement for the <samlp:Response>, <samlp:LogoutRequest>
         // and <samlp:LogoutResponse> elements received by this SP to be signed.
-        "wantMessagesSigned": "false",
+        "wantMessagesSigned": false,
 
         // Indicates a requirement for the <saml:Assertion> elements received by
         // this SP to be signed. [Metadata of the SP will offer this info]
-        "wantAssertionsSigned": "false",
+        "wantAssertionsSigned": false,
 
         // Indicates a requirement for the <saml:Assertion>
         // elements received by this SP to be encrypted.
-        "wantAssertionsEncrypted": "false",
+        "wantAssertionsEncrypted": false,
 
         // Indicates a requirement for the NameID element on the SAMLResponse
         // received by this SP to be present.
-        "wantNameId": "true",
+        "wantNameId": true,
 
         // Indicates a requirement for the NameID received by
         // this SP to be encrypted.
-        "wantNameIdEncrypted": "false",
+        "wantNameIdEncrypted": false,
 
         // Indicates a requirement for the AttributeStatement element
-        "wantAttributeStatement": "true",
+        "wantAttributeStatement": true,
 
         // Authentication context.
         // Set to false and no AuthContext will be sent in the AuthNRequest,
         // Set true or don't present this parameter and you will get an AuthContext 'exact' 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport'
         // Set an array with the possible auth context values: array ('urn:oasis:names:tc:SAML:2.0:ac:classes:Password', 'urn:oasis:names:tc:SAML:2.0:ac:classes:X509'),
-        "requestedAuthnContext": "true",
+        "requestedAuthnContext": true,
     // Allows the authn comparison parameter to be set, defaults to 'exact' if the setting is not present.
         "requestedAuthnContextComparison": "exact",
         // Set to true to check that the AuthnContext(s) received match(es) the requested.
-        "failOnAuthnContextMismatch": "false",
+        "failOnAuthnContextMismatch": false,
 
         // In some environment you will need to set how long the published metadata of the Service Provider gonna be valid.
         // is possible to not set the 2 following parameters (or set to null) and default values will be set (2 days, 1 week)
         // Provide the desire TimeStamp, for example 2015-06-26T20:00:00Z
-        "metadataValidUntil": "null",
+        "metadataValidUntil": null,
         // Provide the desire Duration, for example PT518400S (6 days)
-        "metadataCacheDuration": "null",
+        "metadataCacheDuration": null,
 
         // If enabled, URLs with single-label-domains will
         // be allowed and not rejected by the settings validator (Enable it under Docker/Kubernetes/testing env, not recommended on production)
-        "allowSingleLabelDomains": "false",
+        "allowSingleLabelDomains": false,
 
         // Algorithm that the toolkit will use on signing process. Options:
         //    'http://www.w3.org/2000/09/xmldsig#rsa-sha1'
@@ -243,12 +239,12 @@ ADVANCED_SETTINGS = """
 
         // Specify if you want the SP to view assertions with duplicated Name or FriendlyName attributes to be valid
         // Defaults to false if not specified
-        "allowRepeatAttributeName": "false",
+        "allowRepeatAttributeName": true,
 
         // If the toolkit receive a message signed with a
         // deprecated algorithm (defined at the constant class)
         // will raise an error and reject the message
-        "rejectDeprecatedAlgorithm": "true"
+        "rejectDeprecatedAlgorithm": true
     },
 
     // Contact information template, it is recommended to suply a
