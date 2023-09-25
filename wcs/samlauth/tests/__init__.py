@@ -60,5 +60,6 @@ class FunctionalTesting(TestCase):
             allow_redirects=False
         )
         session_cookie = auth_redirect.cookies
+        assert 'Location' in auth_redirect.headers, 'Expect a redirect to plone'
         url = auth_redirect.headers['Location']
         return session_cookie, url

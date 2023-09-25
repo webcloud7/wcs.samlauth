@@ -1,4 +1,5 @@
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
+from onelogin.saml2.errors import OneLogin_Saml2_Error
 from plone import api
 from Products.Five.browser import BrowserView
 from urllib.parse import urlparse
@@ -44,7 +45,17 @@ class BaseSamlView(BrowserView):
 
 class LoginView(BaseSamlView):
     def __call__(self):
-        auth = OneLogin_Saml2_Auth(self.saml_request, self.settings)
+        try:
+            auth = OneLogin_Saml2_Auth(self.saml_request, self.settings)
+        except OneLogin_Saml2_Error as error:
+            LOGGER.error(str(error))
+            self.request.response.setHeader('X-Theme-Disabled', '1')
+            self.request.response.setHeader('Content-Type', 'text/plain')
+            self.request.response.setStatus(400)
+            if self.settings['debug']:
+                return f'SAML SP configuration error: {str(error)}'
+            return 'SAML SP configuration not valid, please check logs'
+
         if auth.get_last_request_id():
             self.request.response.setCookie(
                 SAML_AUTHN_REQUEST_COOKIE_NAME,
