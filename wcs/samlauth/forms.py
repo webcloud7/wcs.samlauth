@@ -62,12 +62,7 @@ class LoadIdPMetadataForm(form.Form):
 
         self.idp_data = self._fetch_metadata(data['metadata_url'])
         updated_data = self.context._update_metadata(self.idp_data)
-        self.context.manage_changeProperties(
-            **{
-                'settings_idp': json.dumps({'idp': updated_data['idp']}, indent=4),
-                'settings_sp': json.dumps({'sp': updated_data['sp']}, indent=4),
-            }
-        )
+        self.context.store(updated_data)
 
         msg = _(
             'text_get_and_store',

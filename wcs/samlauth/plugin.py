@@ -221,14 +221,21 @@ class SamlAuthPlugin(BasePlugin):
         settings_clean = clean_for_json(self.getProperty('settings'))
         settings_sp_clean = clean_for_json(self.getProperty('settings_sp'))
         settings_idp_clean = clean_for_json(self.getProperty('settings_idp'))
+        advanced_settings = clean_for_json(self.getProperty('advanced'))
 
         settings = json.loads(settings_clean)
         settings.update(json.loads(settings_sp_clean))
         settings.update(json.loads(settings_idp_clean))
-        
-        # advanced_settings = json.loads(self.getProperty('advanced'))
-        # settings.update(advanced_settings)
+        settings.update(json.loads(advanced_settings))
         return settings
+
+    def store(self, metadata):
+        self.manage_changeProperties(
+            **{
+                'settings_idp': json.dumps({'idp': metadata['idp']}, indent=4),
+                'settings_sp': json.dumps({'sp': metadata['sp']}, indent=4),
+            }
+        )
 
     def challenge(self, request, response):
         """Assert via the response that credentials will be gathered.

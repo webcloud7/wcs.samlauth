@@ -14,7 +14,6 @@ class TestIdpMetadata(FunctionalTesting):
         transaction.commit()
 
         self.browser = self.get_browser()
-        self.browser.handleErrors = False
 
     def test_fetch_idp_metadata(self):
         """ We expect to find something like this in the idp metadata endppoint
