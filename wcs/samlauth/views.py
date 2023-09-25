@@ -22,7 +22,7 @@ class BaseSamlView(BrowserView):
         url = urlparse(self.request.URL)
         return {
             'https': 'on' if url.scheme == 'https' else 'off',
-            'http_host': self.request.SERVER_URL,
+            'http_host': url.netloc,
             'script_name': self.request.PATH_INFO,
             'get_data': self.request.form.copy(),
             # Uncomment if using ADFS as IdP, https://github.com/onelogin/python-saml/pull/144
@@ -45,10 +45,11 @@ class BaseSamlView(BrowserView):
 class LoginView(BaseSamlView):
     def __call__(self):
         auth = OneLogin_Saml2_Auth(self.saml_request, self.settings)
-        self.request.response.setCookie(
-            SAML_AUTHN_REQUEST_COOKIE_NAME,
-            auth.get_last_request_id()
-        )
+        if auth.get_last_request_id():
+            self.request.response.setCookie(
+                SAML_AUTHN_REQUEST_COOKIE_NAME,
+                auth.get_last_request_id()
+            )
         return self.request.RESPONSE.redirect(auth.login())
 
 
@@ -70,7 +71,7 @@ class CallbackView(BaseSamlView):
         if request_id:
             self.request.response.expireCookie(SAML_AUTHN_REQUEST_COOKIE_NAME)
 
-        self.remember_identity(auth)
+        self.context.remember_identity(auth)
         return self.request.response.redirect(api.portal.get().absolute_url())
 
 

@@ -1,6 +1,8 @@
 {
   "id" : "c6cfc7f1-864a-4894-992f-d73fddc9ae53",
   "realm" : "saml-test",
+  "displayName" : "",
+  "displayNameHtml" : "",
   "notBefore" : 0,
   "defaultSignatureAlgorithm" : "RS256",
   "revokeRefreshToken" : false,
@@ -26,7 +28,7 @@
   "oauth2DeviceCodeLifespan" : 600,
   "oauth2DevicePollingInterval" : 5,
   "enabled" : true,
-  "sslRequired" : "external",
+  "sslRequired" : "none",
   "registrationAllowed" : false,
   "registrationEmailAsUsername" : false,
   "rememberMe" : false,
@@ -76,6 +78,7 @@
       "attributes" : { }
     } ],
     "client" : {
+      "http://localhost:65035/plone/acl_users/saml/metadata" : [ ],
       "realm-management" : [ {
         "id" : "549aae13-e6d6-49a8-b75f-2dfe361f6e72",
         "name" : "manage-users",
@@ -245,7 +248,6 @@
         "attributes" : { }
       } ],
       "security-admin-console" : [ ],
-      "plone" : [ ],
       "admin-cli" : [ ],
       "account-console" : [ ],
       "broker" : [ {
@@ -351,7 +353,7 @@
   "otpPolicyLookAheadWindow" : 1,
   "otpPolicyPeriod" : 30,
   "otpPolicyCodeReusable" : false,
-  "otpSupportedApplications" : [ "totpAppMicrosoftAuthenticatorName", "totpAppFreeOTPName", "totpAppGoogleName" ],
+  "otpSupportedApplications" : [ "totpAppFreeOTPName", "totpAppGoogleName", "totpAppMicrosoftAuthenticatorName" ],
   "webAuthnPolicyRpEntityName" : "keycloak",
   "webAuthnPolicySignatureAlgorithms" : [ "ES256" ],
   "webAuthnPolicyRpId" : "",
@@ -382,7 +384,17 @@
     "firstName" : "Test",
     "lastName" : "User",
     "email" : "testuser@webcloud7.ch",
-    "credentials" : [ ],
+    "attributes" : {
+      "saml.persistent.name.id.for.http://localhost:65035/plone/acl_users/saml/metadata" : [ "G-0eea865f-877e-49bc-841a-28e37fb1ab95" ]
+    },
+    "credentials" : [ {
+      "id" : "be11a4ab-08fa-46b2-b3cb-921e36c6fc0c",
+      "type" : "password",
+      "userLabel" : "My password",
+      "createdDate" : 1695640029344,
+      "secretData" : "{\"value\":\"YlW9StdetpcjpT7nOrIPtEFpewHcz4qm0K9j8c5HF/w=\",\"salt\":\"inmD+zAgeVqWj6PAvpCZSA==\",\"additionalParameters\":{}}",
+      "credentialData" : "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+    } ],
     "disableableCredentialTypes" : [ ],
     "requiredActions" : [ ],
     "realmRoles" : [ "default-roles-saml-test" ],
@@ -522,17 +534,17 @@
     "optionalClientScopes" : [ "address", "phone", "offline_access", "microprofile-jwt" ]
   }, {
     "id" : "8e11fb06-5dde-4c76-a150-e624e18d7430",
-    "clientId" : "plone",
+    "clientId" : "http://localhost:65035/plone/acl_users/saml/metadata",
     "name" : "Plone",
     "description" : "Test client Plone",
     "rootUrl" : "",
     "adminUrl" : "",
-    "baseUrl" : "http://localhost:8080/plone/acl_users/saml",
+    "baseUrl" : "http://localhost:65035/plone/acl_users/saml",
     "surrogateAuthRequired" : false,
     "enabled" : true,
     "alwaysDisplayInConsole" : false,
     "clientAuthenticatorType" : "client-secret",
-    "redirectUris" : [ "http://localhost:8080/plone/*" ],
+    "redirectUris" : [ "http://localhost:65035/plone/*" ],
     "webOrigins" : [ ],
     "notBefore" : 0,
     "bearerOnly" : false,
@@ -548,15 +560,15 @@
       "saml.assertion.signature" : "false",
       "saml.force.post.binding" : "true",
       "saml.encrypt" : "false",
-      "post.logout.redirect.uris" : "http://localhost:8080/plone/logout",
+      "post.logout.redirect.uris" : "http://localhost:65035/plone/logout",
       "saml.server.signature" : "true",
       "saml.server.signature.keyinfo.ext" : "false",
       "saml.signing.certificate" : "MIICmTCCAYECBgGKiYY5nTANBgkqhkiG9w0BAQsFADAQMQ4wDAYDVQQDDAVwbG9uZTAeFw0yMzA5MTIxMzExMjlaFw0zMzA5MTIxMzEzMDlaMBAxDjAMBgNVBAMMBXBsb25lMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAm1vW0YfdOohGU/bqrIlOTlLWrxupOe9bTh9dY4ch/9c/UoqXzVicyPClEi10OgfboQ1VoT+rEgTjcwGJnKQvpotytEUroso3QqZuHaOyEja6EOr2ZJLghWz62YdQFErMo2wR4+EvT4Zz3mPs5EQ6Ggg8/phH08pt9xQjjGMZeohTNFy6QR4kgujuj50P/seM5d/i3wL6aawz8RnfiE0OM3OdQ773v8QNpmBzWnR2Vz67f4pqslnw77aXLrtqb4sknWwe3yF+kHPikBHIV8OmMWRuF8WQ/CNrSN7613oMRZg5HJHah70xWR67BD8olDpQ0eJkhgK/ksC2w8CwRwup+QIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBuAMWXK092vjo/+06xbYTKJKKFAP2ivdKMRFiqAAOjSG1IyLdocEqkN/5F/fPE39L7wlE2my8AJmwg40FbIm2rgd/IG8HwX95MSyMzzERP8+tHCdWZg2IUYaG62lKKe2gxLI6GNF6f4TPNLsjlljTzkiirbni6XrRkFFCm4RhHcko+U9HX0Bc2v/BHpDLus3QChmzio9df/AQcoi+Z3IRRJYmMzYWRdVXkZ+/0WMNJO6nAmTsob7sEgJe6Eg091YSatrYWlxY4we9RrpgAW3JARUmAfQ/Rw0ZZLyHOGVQx8MQF+GGTRE56C0e+P0onSO/PeDdTrzCj5CJYNikv/oL5",
-      "saml.artifact.binding.identifier" : "j8ZsWy0Tg9arK30rJctIesuhY4w=",
+      "saml.artifact.binding.identifier" : "nXL+SPMA9TF5a3T3iLlPjaC/K1s=",
       "saml.artifact.binding" : "false",
       "saml.signature.algorithm" : "RSA_SHA256",
       "saml_force_name_id_format" : "false",
-      "saml.client.signature" : "true",
+      "saml.client.signature" : "false",
       "saml.authnstatement" : "true",
       "display.on.consent.screen" : "false",
       "saml_name_id_format" : "username",
@@ -1156,8 +1168,8 @@
   },
   "smtpServer" : { },
   "eventsEnabled" : false,
-  "eventsListeners" : [ "jboss-logging" ],
-  "enabledEventTypes" : [ ],
+  "eventsListeners" : [ "jboss-logging", "email" ],
+  "enabledEventTypes" : [ "SEND_RESET_PASSWORD", "UPDATE_CONSENT_ERROR", "GRANT_CONSENT", "VERIFY_PROFILE_ERROR", "REMOVE_TOTP", "REVOKE_GRANT", "UPDATE_TOTP", "LOGIN_ERROR", "CLIENT_LOGIN", "RESET_PASSWORD_ERROR", "IMPERSONATE_ERROR", "CODE_TO_TOKEN_ERROR", "CUSTOM_REQUIRED_ACTION", "OAUTH2_DEVICE_CODE_TO_TOKEN_ERROR", "RESTART_AUTHENTICATION", "IMPERSONATE", "UPDATE_PROFILE_ERROR", "LOGIN", "OAUTH2_DEVICE_VERIFY_USER_CODE", "UPDATE_PASSWORD_ERROR", "CLIENT_INITIATED_ACCOUNT_LINKING", "TOKEN_EXCHANGE", "AUTHREQID_TO_TOKEN", "LOGOUT", "REGISTER", "DELETE_ACCOUNT_ERROR", "CLIENT_REGISTER", "IDENTITY_PROVIDER_LINK_ACCOUNT", "DELETE_ACCOUNT", "UPDATE_PASSWORD", "CLIENT_DELETE", "FEDERATED_IDENTITY_LINK_ERROR", "IDENTITY_PROVIDER_FIRST_LOGIN", "CLIENT_DELETE_ERROR", "VERIFY_EMAIL", "CLIENT_LOGIN_ERROR", "RESTART_AUTHENTICATION_ERROR", "EXECUTE_ACTIONS", "REMOVE_FEDERATED_IDENTITY_ERROR", "TOKEN_EXCHANGE_ERROR", "PERMISSION_TOKEN", "SEND_IDENTITY_PROVIDER_LINK_ERROR", "EXECUTE_ACTION_TOKEN_ERROR", "SEND_VERIFY_EMAIL", "OAUTH2_DEVICE_AUTH", "EXECUTE_ACTIONS_ERROR", "REMOVE_FEDERATED_IDENTITY", "OAUTH2_DEVICE_CODE_TO_TOKEN", "IDENTITY_PROVIDER_POST_LOGIN", "IDENTITY_PROVIDER_LINK_ACCOUNT_ERROR", "OAUTH2_DEVICE_VERIFY_USER_CODE_ERROR", "UPDATE_EMAIL", "REGISTER_ERROR", "REVOKE_GRANT_ERROR", "EXECUTE_ACTION_TOKEN", "LOGOUT_ERROR", "UPDATE_EMAIL_ERROR", "CLIENT_UPDATE_ERROR", "AUTHREQID_TO_TOKEN_ERROR", "UPDATE_PROFILE", "CLIENT_REGISTER_ERROR", "FEDERATED_IDENTITY_LINK", "SEND_IDENTITY_PROVIDER_LINK", "SEND_VERIFY_EMAIL_ERROR", "RESET_PASSWORD", "CLIENT_INITIATED_ACCOUNT_LINKING_ERROR", "OAUTH2_DEVICE_AUTH_ERROR", "UPDATE_CONSENT", "REMOVE_TOTP_ERROR", "VERIFY_EMAIL_ERROR", "SEND_RESET_PASSWORD_ERROR", "CLIENT_UPDATE", "CUSTOM_REQUIRED_ACTION_ERROR", "IDENTITY_PROVIDER_POST_LOGIN_ERROR", "UPDATE_TOTP_ERROR", "CODE_TO_TOKEN", "VERIFY_PROFILE", "GRANT_CONSENT_ERROR", "IDENTITY_PROVIDER_FIRST_LOGIN_ERROR" ],
   "adminEventsEnabled" : false,
   "adminEventsDetailsEnabled" : false,
   "identityProviders" : [ ],
@@ -1232,6 +1244,12 @@
       "config" : {
         "max-clients" : [ "200" ]
       }
+    } ],
+    "org.keycloak.userprofile.UserProfileProvider" : [ {
+      "id" : "6951a1d9-d480-4534-b845-69e0ab42b050",
+      "providerId" : "declarative-user-profile",
+      "subComponents" : { },
+      "config" : { }
     } ],
     "org.keycloak.keys.KeyProvider" : [ {
       "id" : "3e6bdfb7-3333-48dd-8552-cb368b988d15",
@@ -1817,13 +1835,19 @@
   "dockerAuthenticationFlow" : "docker auth",
   "attributes" : {
     "cibaBackchannelTokenDeliveryMode" : "poll",
-    "cibaExpiresIn" : "120",
     "cibaAuthRequestedUserHint" : "login_hint",
-    "oauth2DeviceCodeLifespan" : "600",
     "oauth2DevicePollingInterval" : "5",
-    "parRequestUriLifespan" : "60",
+    "clientOfflineSessionMaxLifespan" : "0",
+    "clientSessionIdleTimeout" : "0",
+    "clientOfflineSessionIdleTimeout" : "0",
     "cibaInterval" : "5",
-    "realmReusableOtpCode" : "false"
+    "realmReusableOtpCode" : "false",
+    "cibaExpiresIn" : "120",
+    "oauth2DeviceCodeLifespan" : "600",
+    "parRequestUriLifespan" : "60",
+    "clientSessionMaxLifespan" : "0",
+    "frontendUrl" : "",
+    "acr.loa.map" : "{}"
   },
   "keycloakVersion" : "22.0.2",
   "userManagedAccessAllowed" : false,
