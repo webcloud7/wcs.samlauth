@@ -1,4 +1,6 @@
-from bs4 import BeautifulSoup
+from plone import api
+from plone.app.testing import TEST_USER_ID
+from plone.restapi.setuphandlers import install_pas_plugin as install_api_jwt_plugin
 from wcs.samlauth.tests import FunctionalTesting
 from wcs.samlauth.utils import PLUGIN_ID
 import requests
@@ -33,7 +35,7 @@ class TestLogin(FunctionalTesting):
             cookies=login_form.cookies
         )
 
-        # 3. Submit callback (acs) - since there is no JS we do this manually 
+        # 3. Submit callback (acs) - since there is no JS we do this manually
         url_acs = self._find_content(login_acs.content, 'form').attrs['action']
         input_elements = self._find_content(login_acs.content, 'input[type=hidden]', 'select')
         auth_redirect = requests.post(
@@ -68,3 +70,50 @@ class TestLogin(FunctionalTesting):
             'testuser@webcloud7.ch',
             self._find_content(reponse_profile.content, '#form-widgets-email').attrs['value']
         )
+
+    def test_user_properties(self):
+        self._login_keycloak_test_user()
+        transaction.begin()
+
+        self.assertEqual(
+            2, len(api.portal.get_tool('portal_membership').listMembers()),
+            'Expect 2 users, the test user and the new user from keycloak'
+        )
+
+        user = tuple(filter(
+            lambda user: user.getId() != TEST_USER_ID,
+            api.portal.get_tool('portal_membership').listMembers())
+        )[0]
+
+        self.assertEqual('testuser@webcloud7.ch', user.getProperty('email'))
+        self.assertEqual('Test User', user.getProperty('fullname'))
+
+    def test_do_not_create_user(self):
+        self.plugin.manage_changeProperties(create_user=False)
+        transaction.commit()
+        self._login_keycloak_test_user()
+
+        transaction.begin()
+
+        self.assertEqual(
+            1, len(api.portal.get_tool('portal_membership').listMembers()),
+            'Expect 1 user, the test user and the new user from keycloak'
+        )
+
+    def test_do_not_create_plone_session(self):
+        self.plugin.manage_changeProperties(create_session=False)
+        transaction.commit()
+        session_cookie, url = self._login_keycloak_test_user()
+
+        self.assertFalse(session_cookie, 'Expect no session cookie')
+
+    def test_create_api_session(self):
+        self.plugin.manage_changeProperties(create_api_session=True)
+        install_api_jwt_plugin(self.portal)
+        transaction.commit()
+        session_cookie, url = self._login_keycloak_test_user()
+
+        self.assertTrue(session_cookie, 'Expect session cookie')
+
+        jwt_cookie = session_cookie.get('auth_token')
+        self.assertTrue(jwt_cookie, 'Expect api jwt session cookie')

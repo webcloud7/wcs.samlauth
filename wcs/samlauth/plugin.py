@@ -141,9 +141,9 @@ class SamlAuthPlugin(BasePlugin):
                     self._updateUserProperties(user, userinfo)
 
         if user and self.getProperty("create_session"):
-            self._setupTicket(user_id)
+            self._setup_plone_session(user_id)
         if user and self.getProperty("create_api_session"):
-            self._setupJWTTicket(user_id, user)
+            self._setup_jwt_session(user_id, user)
 
     def _updateUserProperties(self, user, userinfo):
         """Update the given user properties from the set of credentials.
@@ -170,8 +170,8 @@ class SamlAuthPlugin(BasePlugin):
         """Return a obfuscated password never used for login"""
         return "".join([choice(PWCHARS) for ii in range(40)])  # nosec B311
 
-    def _setupTicket(self, user_id):
-        """Set up authentication ticket (__ac cookie) with plone.session.
+    def _setup_plone_session(self, user_id):
+        """Set up authentication session (__ac cookie) with plone.session.
 
         Only call this when self.create_session is True.
         """
@@ -189,8 +189,8 @@ class SamlAuthPlugin(BasePlugin):
         pas.session._setupSession(user_id, response)
         logger.debug("Done setting up session/ticket for %s" % user_id)
 
-    def _setupJWTTicket(self, user_id, user):
-        """Set up JWT authentication ticket (auth_token cookie).
+    def _setup_jwt_session(self, user_id, user):
+        """Set up JWT authentication session (auth_token cookie).
 
         Only call this when self.create_api_session is True.
         """

@@ -9,6 +9,7 @@ from wcs.samlauth.testing import SAMLAUTH_FUNCTIONAL_TESTING
 from wcs.samlauth.utils import install_plugin
 import operator
 import transaction
+import requests
 
 
 class FunctionalTesting(TestCase):
@@ -41,3 +42,23 @@ class FunctionalTesting(TestCase):
         soup = BeautifulSoup(data, 'html.parser')
         find = operator.methodcaller(method, query)
         return find(soup)
+
+    def _login_keycloak_test_user(self):
+        login_form = requests.get(self.plugin.absolute_url() + '/sls')
+        url_login = self._find_content(login_form.content, 'form').attrs['action']
+        login_acs = requests.post(
+            url_login,
+            data={'username': ' testuser@webcloud7.ch', 'password': '12345'},
+            cookies=login_form.cookies
+        )
+        url_acs = self._find_content(login_acs.content, 'form').attrs['action']
+        input_elements = self._find_content(login_acs.content, 'input[type=hidden]', 'select')
+        auth_redirect = requests.post(
+            url_acs,
+            data={element.attrs['name']: element.attrs['value'] for element in input_elements},
+            cookies=login_acs.cookies,
+            allow_redirects=False
+        )
+        session_cookie = auth_redirect.cookies
+        url = auth_redirect.headers['Location']
+        return session_cookie, url
