@@ -89,8 +89,8 @@ class SamlAuthPlugin(BasePlugin):
         dict(id='create_session', label='Create Plone Session', type='boolean', mode='w'),
         dict(id='create_api_session', label='Create API Session', type='boolean', mode='w'),
         dict(id='create_user', label='Create User', type='boolean', mode='w'),
-        dict(id='settings_sp', label='Settings', type='text', mode='w'),
-        dict(id='settings_idp', label='Settings', type='text', mode='w'),
+        dict(id='settings_sp', label='SP (plone) Settings', type='text', mode='w'),
+        dict(id='settings_idp', label='IDP Settings', type='text', mode='w'),
         dict(id='advanced', label='Advanced', type='text', mode='w'),
     )
 

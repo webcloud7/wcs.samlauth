@@ -5,6 +5,9 @@
       i18n:domain="plone">
 
         <div class="row">
+            <p class="documentDescription">
+                Only IDP and SP informations is updated automatically.
+            </p>
             <metal:form use-macro="context/@@ploneform-macros/titlelessform">
                 <metal:slot fill-slot="fields">
                     <div tal:content="structure view/widgets/metadata_url/@@ploneform-render-widget" />
