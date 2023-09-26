@@ -9,10 +9,6 @@ class TestIdpMetadata(FunctionalTesting):
     def setUp(self):
         super().setUp()
         self.grant('Manager')
-        self._create_plugin()
-        self.plugin = getattr(self.portal.acl_users, PLUGIN_ID)
-        transaction.commit()
-
         self.browser = self.get_browser()
 
     def test_fetch_idp_metadata(self):

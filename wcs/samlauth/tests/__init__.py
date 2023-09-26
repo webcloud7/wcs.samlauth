@@ -7,6 +7,7 @@ from plone.testing.zope import Browser
 from unittest import TestCase
 from wcs.samlauth.testing import SAMLAUTH_FUNCTIONAL_TESTING
 from wcs.samlauth.utils import install_plugin
+from wcs.samlauth.utils import PLUGIN_ID
 import operator
 import transaction
 import requests
@@ -19,6 +20,13 @@ class FunctionalTesting(TestCase):
         self.portal = self.layer['portal']
         self.request = self.layer['request']
         self.idp_metadata_url = 'http://localhost:8000/realms/saml-test/protocol/saml/descriptor'
+
+        self._create_plugin()
+        self.plugin = getattr(self.portal.acl_users, PLUGIN_ID)
+
+    def tearDown(self):
+        super().tearDown()
+        self.portal.acl_users.manage_delObjects([PLUGIN_ID])
 
     def grant(self, *roles):
         setRoles(self.portal, TEST_USER_ID, list(roles))
@@ -37,6 +45,7 @@ class FunctionalTesting(TestCase):
 
     def _create_plugin(self):
         install_plugin()
+        transaction.commit()
 
     def _find_content(self, data, query, method='select_one'):
         soup = BeautifulSoup(data, 'html.parser')
@@ -45,6 +54,9 @@ class FunctionalTesting(TestCase):
 
     def _login_keycloak_test_user(self):
         login_form = requests.get(self.plugin.absolute_url() + '/sls')
+        assert login_form.url.startswith('http://localhost:8000/realms/saml-test/protocol/saml'), (
+            'Expect a redirect to keycloak, but got: ' + login_form.url)
+        assert bool(self._find_content(login_form.content, 'form')), 'Expect a form element'
         url_login = self._find_content(login_form.content, 'form').attrs['action']
         login_acs = requests.post(
             url_login,

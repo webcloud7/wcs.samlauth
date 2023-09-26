@@ -152,6 +152,16 @@ class KeyCloakLayer(BaseDockerServiceLayer):
         self._configure()
         self._create_realm()
 
+    def testSetUp(self):
+        super().testSetUp()
+        self['create_realm'] = self._create_realm
+        self['delete_realm'] = self._delete_realm
+
+    def testTearDown(self):
+        super().testTearDown()
+        del self["create_realm"]
+        del self["delete_realm"]
+
     def tearDown(self):
         self._delete_realm()
         super().tearDown()

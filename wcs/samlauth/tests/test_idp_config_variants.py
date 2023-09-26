@@ -1,8 +1,9 @@
+from onelogin.saml2.utils import OneLogin_Saml2_Utils
 from wcs.samlauth.tests import FunctionalTesting
-from wcs.samlauth.utils import PLUGIN_ID
+import json
+import os
 import requests
 import transaction
-import json
 
 
 class TestLoginWithDifferentIdpConfigVariants(FunctionalTesting):
@@ -10,9 +11,9 @@ class TestLoginWithDifferentIdpConfigVariants(FunctionalTesting):
     def setUp(self):
         super().setUp()
         self.grant('Manager')
-        self._create_plugin()
-        self.plugin = getattr(self.portal.acl_users, PLUGIN_ID)
-        transaction.commit()
+
+        self.layer['delete_realm']()
+        self.layer['create_realm'](filename='saml-test-realm-sp-signature.json')
 
         self.browser = self.get_browser()
         self.browser.open(self.plugin.absolute_url() + '/idp_metadata')
@@ -20,34 +21,35 @@ class TestLoginWithDifferentIdpConfigVariants(FunctionalTesting):
             name='form.widgets.metadata_url').value = self.idp_metadata_url
         self.browser.getControl(name='form.buttons.get_and_store').click()
 
-    def test_non_strict_mode(self):
-        """ This mode basically ignores all security settings and
-        only verifies the idp certificate, do not use in production.
-        Details check `OneLogin_Saml2_Response` class.
-        """
+    def tearDown(self):
+        super().tearDown()
+        self.layer['delete_realm']()
+        self.layer['create_realm'](filename='saml-test-realm.json')
+
+    def _setup_sp_cert(self):
+        settings_sp = json.loads(self.plugin.getProperty('settings_sp'))
+
+        cert_path = os.path.join(os.path.dirname(__file__), 'assets', 'sp.cer')
+        with open(cert_path, 'r') as cert:
+            settings_sp['sp']['x509cert'] = OneLogin_Saml2_Utils.format_cert(cert.read(), heads=False)
+
+        private_key_path = os.path.join(os.path.dirname(__file__), 'assets', 'sp_private_key')
+        with open(private_key_path, 'r') as private_key:
+            settings_sp['sp']['privateKey'] = OneLogin_Saml2_Utils.format_private_key(private_key.read(), heads=False)
+
+        self.plugin.manage_changeProperties(settings_sp=json.dumps(settings_sp))
 
         settings = json.loads(self.plugin.getProperty('advanced'))
-        settings['security']['wantAssertionsSigned'] = True
+        settings['security']['authnRequestsSigned'] = True
         self.plugin.manage_changeProperties(advanced=json.dumps(settings))
         transaction.commit()
 
-        with self.assertRaises(AssertionError):
-            self._login_keycloak_test_user()
-
-        settings['strict'] = False
-        self.plugin.manage_changeProperties(advanced=json.dumps(settings))
-        transaction.commit()
+    def test_idp_expects_sp_cert(self):
+        """Test with SP certificate"""
+        self._setup_sp_cert()
         session, url = self._login_keycloak_test_user()
         self.assertTrue(session.get('__ac'), 'Expect a plone session')
 
-    def test_sp_config_error(self):
-        settings = json.loads(self.plugin.getProperty('advanced'))
-        settings['security']['logoutRequestSigned'] = True
-        self.plugin.manage_changeProperties(advanced=json.dumps(settings))
-        transaction.commit()
-
-        login_form = requests.get(self.plugin.absolute_url() + '/sls')
-        self.assertEqual(
-            b'SAML SP configuration error: Invalid dict settings: sp_cert_not_found_and_required',
-            login_form.content
-        )
+    def test_do_not_login_without_client_cert(self):
+        with self.assertRaises():
+            self._login_keycloak_test_user()

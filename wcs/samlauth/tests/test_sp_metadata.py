@@ -9,9 +9,6 @@ class TestSpMetadata(FunctionalTesting):
 
     def setUp(self):
         super().setUp()
-        self._create_plugin()
-        self.plugin = getattr(self.portal.acl_users, PLUGIN_ID)
-        transaction.commit()
 
     def test_sp_metadata(self):
         response = requests.get(f'{self.plugin.absolute_url()}/metadata')
