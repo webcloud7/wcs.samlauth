@@ -104,7 +104,7 @@ class CallbackView(BaseSamlView):
         return api.portal.get().absolute_url()
 
 
-class LogoutView(BaseSamlView):
+class IdpLogoutView(BaseSamlView):
     def __call__(self):
         auth = OneLogin_Saml2_Auth(self.saml_request, self.settings)
 
@@ -114,7 +114,14 @@ class LogoutView(BaseSamlView):
             # Handle JWT token logout
 
         auth.process_slo(delete_session_cb=_logout)
-        return self.request.RESPONSE.redirect(api.portal.get().absolute_url() + '/logged_out')
+        return self.request.RESPONSE.redirect(api.portal.get().absolute_url() + '/logged-out')
+
+
+class LogoutView(BaseSamlView):
+    def __call__(self):
+        auth = OneLogin_Saml2_Auth(self.saml_request, self.settings)
+        logout_url = auth.logout(return_to=api.portal.get().absolute_url())
+        return self.request.RESPONSE.redirect(logout_url)
 
 
 class MetadataView(BaseSamlView):

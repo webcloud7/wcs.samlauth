@@ -24,6 +24,13 @@
     <browser:page
       for="wcs.samlauth.plugin.ISamlAuthPlugin"
       name="slo"
+      class=".views.IdpLogoutView"
+      permission="zope2.View"
+      />
+
+    <browser:page
+      for="wcs.samlauth.plugin.ISamlAuthPlugin"
+      name="logout"
       class=".views.LogoutView"
       permission="zope2.View"
       />
