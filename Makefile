@@ -77,7 +77,7 @@ help: ## This help message
 	@echo "${WARN_COLOR}Additional parameters:${NO_COLOR}"
 	@echo "${MARK_COLOR}PYTHON${NO_COLOR}:       python interpreter to be used (default: python3)"
 	@echo "${MARK_COLOR}VENV${NO_COLOR}:        [on|off] wether to create a Python virtual environment or not (default: on)"
-	@echo "${MARK_COLOR}VENV_FOLDER${NO_COLOR}: location of the virtual environment (default: ./venv)"
+	@echo "${MARK_COLOR}VENV_FOLDER${NO_COLOR}: location of the virtual environment (default: .)"
 	@echo
 	@echo "${WARN_COLOR}Targets:${NO_COLOR}"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
@@ -108,7 +108,7 @@ ${SENTINEL}:
 PYTHON?=python3
 VENV?=on
 ifeq ("${VENV}", "on")
-	VENV_FOLDER?=./venv
+	VENV_FOLDER?=.
 	PYBIN=${VENV_FOLDER}/bin/
 else
 	VENV_FOLDER?=
@@ -201,11 +201,13 @@ ${TESTRUNNER_SENTINEL}: ${PIP_SENTINEL}
 	@echo "$(OK_COLOR)Install zope.testrunner$(NO_COLOR)"
 	@${PYBIN}pip install -c ${CONSTRAINTS_MXDEV} zope.testrunner
 	@touch ${TESTRUNNER_SENTINEL}
+	> ${PYBIN}test && chmod +x ${PYBIN}test
+	@echo '$(TEST_ENV_VARS) ${PYBIN}zope-testrunner --auto-color --auto-progress --test-path=${ADDONFOLDER} "$$@"' >> ${PYBIN}/test
 
 .PHONY: test
 test: ${TEST_PREREQUISITES} ${TESTRUNNER_SENTINEL} ## run tests
 	@echo "$(OK_COLOR)Run addon tests$(NO_COLOR)"
-	@$(TEST_ENV_VARS) ${PYBIN}zope-testrunner --auto-color --auto-progress --test-path=${ADDONFOLDER}
+	@${PYBIN}/test
 
 .PHONY: test-ignore-warnings
 test-ignore-warnings: ${TEST_PREREQUISITES} ${TESTRUNNER_SENTINEL}  ## run tests (hide warnins)
