@@ -203,21 +203,10 @@ class SamlAuthPlugin(BasePlugin):
         )
 
     def challenge(self, request, response):
-        """Assert via the response that credentials will be gathered.
-
-        For IChallengePlugin.
-
-        Takes a REQUEST object and a RESPONSE object.
-
-        Must return True if it fired, False/None otherwise.
-
-        Note: if you are not logged in, and go to the login form,
-        everything will still work, and you will not be challenged.
-        A challenge is only tried when you are unauthorized.
+        """Go to the login view of the PAS plugin
         """
-        # Go to the login view of the PAS plugin.
-        logger.info("Challenge. Came from %s", request.URL)
-        url = "{}/require_login?came_from={}".format(self.absolute_url(), request.URL)
+        logger.info(f'Challenge. Came from {request.URL}')
+        url = f"{self.absolute_url()}/require_login?came_from={request.URL}"
         response.redirect(url, lock=1)
         return True
 

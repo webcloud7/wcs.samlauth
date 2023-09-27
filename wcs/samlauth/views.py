@@ -1,8 +1,8 @@
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
-from onelogin.saml2.auth import OneLogin_Saml2_Utils
 from onelogin.saml2.errors import OneLogin_Saml2_Error
 from plone import api
 from Products.Five.browser import BrowserView
+from urllib.parse import quote
 from urllib.parse import urlparse
 from zExceptions import BadRequest
 import logging
@@ -126,3 +126,26 @@ class MetadataView(BaseSamlView):
             return metadata
         else:
             return "Error found on Metadata: %s" % (', '.join(errors))
+
+
+class RequireLoginView(BrowserView):
+    """Our version of the require-login view from Plone.
+
+    Our challenge plugin redirects here.
+    Note that the plugin has no way of knowing if you are authenticated:
+    its code is called before this is known.
+    I think.
+    """
+
+    def __call__(self):
+        if api.user.is_anonymous():
+            # context is our PAS plugin
+            url = self.context.absolute_url() + '/sls'
+            came_from = self.request.get('came_from', None)
+            if came_from:
+                url += f'?came_from={quote(came_from)}'
+        else:
+            url = api.portal.get().absolute_url()
+            url += '/insufficient-privileges'
+
+        self.request.response.redirect(url)

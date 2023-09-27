@@ -84,8 +84,10 @@ class FunctionalTesting(TestCase):
         find = operator.methodcaller(method, query)
         return find(soup)
 
-    def _login_keycloak_test_user(self, came_from=None):
-        url = self.plugin.absolute_url() + '/sls'
+    def _login_keycloak_test_user(self, came_from=None, url=None):
+        if url is None:
+            url = self.plugin.absolute_url() + '/sls'
+
         if came_from:
             url += '?came_from=' + came_from
         login_form = requests.get(url)

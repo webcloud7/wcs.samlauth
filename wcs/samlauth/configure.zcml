@@ -37,17 +37,16 @@
 
     <browser:page
       for="wcs.samlauth.plugin.ISamlAuthPlugin"
+      name="require_login"
+      class=".views.RequireLoginView"
+      permission="zope2.View"
+      />
+
+    <browser:page
+      for="wcs.samlauth.plugin.ISamlAuthPlugin"
       name="idp_metadata"
       class=".forms.LoadIdPMetadataView"
       permission="cmf.ManagePortal"
-      />
-
-<!--   <browser:page
-      for="wcs.samlauth.plugin.ISamlAuthPlugin"
-      name="require_login"
-      class=".view.RequireLoginView"
-      permission="zope2.View"
-      />
- -->
+      /> 
 
 </configure>

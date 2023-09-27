@@ -147,3 +147,17 @@ class TestLogin(FunctionalTesting):
 
         self.assertTrue(session.get('__ac'), 'Expect a plone session')
         self.assertEqual('https://www.myfrontend.com/demo', url)
+
+    def test_challenge_plugin(self):
+        prefs_url = api.portal.get().absolute_url() + '/@@personal-preferences'
+        response_login_page = requests.get(prefs_url)
+        self.assertEqual(response_login_page.status_code, 200)
+        self.assertTrue(
+            response_login_page.url.startswith('http://localhost:8000/realms/saml-test/protocol/saml'),
+            'Expect a redirect to keycloak, but got: ' + response_login_page.url)
+
+    def test_login_via_challange(self):
+        prefs_url = api.portal.get().absolute_url() + '/@@personal-preferences'
+        session, url = self._login_keycloak_test_user(url=prefs_url)
+        self.assertTrue(session.get('__ac'), 'Expect a plone session')
+        self.assertEqual(prefs_url, url)
