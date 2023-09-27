@@ -1,5 +1,5 @@
 from plone import api
-from wcs.samlauth.plugin import SamlAuthPlugin
+import io
 import logging
 
 
@@ -8,8 +8,9 @@ PLUGIN_ID = 'saml'
 
 
 def install_plugin():
-    """Post install script"""
-    # Setup our request oidc plugin.
+    """Setup saml plugin"""
+
+    from wcs.samlauth.plugin import SamlAuthPlugin
     pas = api.portal.get_tool('acl_users')
 
     # Create plugin if it does not exist.
@@ -48,3 +49,31 @@ def install_plugin():
             LOGGER.info("Moved %s to top of %s.", PLUGIN_ID, interface_name)
 
     return plugin
+
+
+def clean_for_json(data):
+    cleaned_json = ''
+    file_ = io.StringIO()
+    file_.write(data)
+    file_.seek(0)
+    for line_raw in file_.readlines():
+        line = line_raw.strip()
+        if line.startswith('//'):
+            continue
+        elif line.startswith('/*'):
+            continue
+        elif line.startswith('*'):
+            continue
+        else:
+            line = line.replace('"true"', 'true').replace("'true'", "true")
+            line = line.replace('"false"', 'false').replace("'false'", "false")
+            cleaned_json += line
+    return cleaned_json
+
+
+def make_string(element):
+    if isinstance(element, str):
+        return element
+    elif isinstance(element, list):
+        return ''.join(element)
+    return None

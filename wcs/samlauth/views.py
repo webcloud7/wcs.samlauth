@@ -16,7 +16,7 @@ class BaseSamlView(BrowserView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.saml_request = self._prepare_request()
-        self.settings = self._load_settings()
+        self.settings = self.context.load_settings()
         self._update_settings()
 
     def _prepare_request(self):
@@ -30,9 +30,6 @@ class BaseSamlView(BrowserView):
             # 'lowercase_urlencoding': True,
             'post_data': self.request.form.copy()
         }
-
-    def _load_settings(self):
-        return self.context.load_and_clean_settings()
 
     def _update_settings(self):
         """Update SP settings with dynamic values"""

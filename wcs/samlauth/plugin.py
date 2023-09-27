@@ -1,9 +1,7 @@
 from AccessControl.class_init import InitializeClass
 from AccessControl.SecurityInfo import ClassSecurityInfo
-from contextlib import contextmanager
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 from plone import api
-from plone.protect.utils import safeWrite
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
 from Products.PluggableAuthService.interfaces.plugins import IAuthenticationPlugin
 from Products.PluggableAuthService.interfaces.plugins import IChallengePlugin
@@ -14,13 +12,13 @@ from secrets import choice
 from wcs.samlauth.default_settings import ADVANCED_SETTINGS
 from wcs.samlauth.default_settings import DEFAULT_IDP_SETTINGS
 from wcs.samlauth.default_settings import DEFAULT_SP_SETTINGS
+from wcs.samlauth.utils import clean_for_json
+from wcs.samlauth.utils import make_string
 from ZODB.POSException import ConflictError
 from zope.interface import Interface
-import itertools
 import json
 import logging
 import string
-import io
 
 logger = logging.getLogger(__name__)
 PWCHARS = string.ascii_letters + string.digits + string.punctuation
@@ -36,35 +34,6 @@ def manage_addSamlAuthPlugin(self, id_, title='', RESPONSE=None):
 
     if RESPONSE is not None:
         RESPONSE.redirect("manage_workspace")
-
-
-def clean_for_json(data):
-
-    cleaned_json = ''
-    file_ = io.StringIO()
-    file_.write(data)
-    file_.seek(0)
-    for line_raw in file_.readlines():
-        line = line_raw.strip()
-        if line.startswith('//'):
-            continue
-        elif line.startswith('/*'):
-            continue
-        elif line.startswith('*'):
-            continue
-        else:
-            line = line.replace('"true"', 'true').replace("'true'", "true")
-            line = line.replace('"false"', 'false').replace("'false'", "false")
-            cleaned_json += line
-    return cleaned_json
-
-
-def make_string(element):
-    if isinstance(element, str):
-        return element
-    elif isinstance(element, list):
-        return ''.join(element)
-    return None
 
 
 class ISamlAuthPlugin(Interface):
@@ -107,38 +76,36 @@ class SamlAuthPlugin(BasePlugin):
         user = pas.getUserById(user_id)
         if self.getProperty("create_user"):
             if user is None:
-                with safe_write(self.REQUEST):
-                    userAdders = self.plugins.listPlugins(IUserAdderPlugin)
-                    if not userAdders:
-                        raise NotImplementedError(
-                            "I wanted to make a new user, but"
-                            " there are no PAS plugins active"
-                            " that can make users."
-                        )
+                userAdders = self.plugins.listPlugins(IUserAdderPlugin)
+                if not userAdders:
+                    raise NotImplementedError(
+                        "I wanted to make a new user, but"
+                        " there are no PAS plugins active"
+                        " that can make users."
+                    )
 
-                    # Add the user to the first IUserAdderPlugin that works:
-                    user = None
-                    for _, curAdder in userAdders:
-                        if curAdder.doAddUser(user_id, self._generatePassword()):
-                            # Assign a dummy password. It'll never be used;.
-                            user = self._getPAS().getUser(user_id)
-                            try:
-                                membershipTool = api.portal.get_tool("portal_membership")
-                                if not membershipTool.getHomeFolder(user_id):
-                                    membershipTool.createMemberArea(user_id)
-                            except (ConflictError, KeyboardInterrupt):
-                                raise
-                            except Exception:  # nosec B110
-                                # Silently ignored exception, but seems fine here.
-                                # Logging would likely generate too much noise,
-                                # depending on your setup.
-                                # https://bandit.readthedocs.io/en/1.7.4/plugins/b110_try_except_pass.html
-                                pass
-                            self._updateUserProperties(user, userinfo)
-                            break
+                # Add the user to the first IUserAdderPlugin that works:
+                user = None
+                for _, curAdder in userAdders:
+                    if curAdder.doAddUser(user_id, self._generatePassword()):
+                        # Assign a dummy password. It'll never be used;.
+                        user = self._getPAS().getUser(user_id)
+                        try:
+                            membershipTool = api.portal.get_tool("portal_membership")
+                            if not membershipTool.getHomeFolder(user_id):
+                                membershipTool.createMemberArea(user_id)
+                        except (ConflictError, KeyboardInterrupt):
+                            raise
+                        except Exception:  # nosec B110
+                            # Silently ignored exception, but seems fine here.
+                            # Logging would likely generate too much noise,
+                            # depending on your setup.
+                            # https://bandit.readthedocs.io/en/1.7.4/plugins/b110_try_except_pass.html
+                            pass
+                        self._updateUserProperties(user, userinfo)
+                        break
             else:
-                with safe_write(self.REQUEST):
-                    self._updateUserProperties(user, userinfo)
+                self._updateUserProperties(user, userinfo)
 
         if user and self.getProperty("create_session"):
             self._setup_plone_session(user_id)
@@ -184,8 +151,7 @@ class SamlAuthPlugin(BasePlugin):
         if info is None:
             logger.debug("No user found matching header. Will not set up session.")
             return
-        request = self.REQUEST
-        response = request["RESPONSE"]
+        response = self.REQUEST.RESPONSE
         pas.session._setupSession(user_id, response)
         logger.debug("Done setting up session/ticket for %s" % user_id)
 
@@ -204,9 +170,7 @@ class SamlAuthPlugin(BasePlugin):
             payload = {}
             payload["fullname"] = user.getProperty("fullname")
             token = plugin.create_token(user.getId(), data=payload)
-            request = self.REQUEST
-            response = request["RESPONSE"]
-            # TODO: take care of path, cookiename and domain options ?
+            response = self.REQUEST.RESPONSE
             response.setCookie("auth_token", token, path="/")
 
     def _fetch_metadata(self, url):
@@ -214,21 +178,16 @@ class SamlAuthPlugin(BasePlugin):
         return idp_data
 
     def _update_metadata(self, new_data):
-        settings = self.load_and_clean_settings()
+        settings = self.load_settings()
         merged_data = OneLogin_Saml2_IdPMetadataParser.merge_settings(
             settings, new_data
         )
-
         return merged_data
 
-    def load_and_clean_settings(self):
-        advanced_settings = clean_for_json(self.getProperty('advanced'))
-        settings_sp_clean = clean_for_json(self.getProperty('settings_sp'))
-        settings_idp_clean = clean_for_json(self.getProperty('settings_idp'))
-
-        settings = json.loads(advanced_settings)
-        settings.update(json.loads(settings_sp_clean))
-        settings.update(json.loads(settings_idp_clean))
+    def load_settings(self):
+        settings = json.loads(self.getProperty('advanced'))
+        settings.update(json.loads(self.getProperty('settings_sp')))
+        settings.update(json.loads(self.getProperty('settings_idp')))
         return settings
 
     def store(self, metadata):
@@ -268,36 +227,3 @@ classImplements(
     ISamlAuthPlugin,
     IChallengePlugin,
 )
-
-
-# https://github.com/collective/Products.AutoUserMakerPASPlugin/blob/master/Products/AutoUserMakerPASPlugin/auth.py
-@contextmanager
-def safe_write(request):
-    """Disable CSRF protection of plone.protect for a block of code.
-    Inside the context manager objects can be written to without any
-    restriction. The context manager collects all touched objects
-    and marks them as safe write."""
-    # We used 'set' here before, but that could lead to:
-    # TypeError: unhashable type: 'PersistentMapping'
-    objects_before = _registered_objects(request)
-    yield
-    objects_after = _registered_objects(request)
-    for obj in objects_after:
-        if obj not in objects_before:
-            safeWrite(obj, request)
-
-
-def _registered_objects(request):
-    """Collect all objects part of a pending write transaction."""
-    app = request.PARENTS[-1]
-    return list(
-        itertools.chain.from_iterable(
-            [
-                conn._registered_objects
-                # skip the 'temporary' connection since it stores session objects
-                # which get written all the time
-                for name, conn in app._p_jar.connections.items()
-                if name != "temporary"
-            ]
-        )
-    )

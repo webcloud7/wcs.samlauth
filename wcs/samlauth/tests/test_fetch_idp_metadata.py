@@ -89,7 +89,7 @@ class TestIdpMetadata(FunctionalTesting):
 
         self.browser.getControl(name='form.buttons.get_and_store').click()
 
-        metadata = self.plugin.load_and_clean_settings()
+        metadata = self.plugin.load_settings()
         self.assertEqual(idp_data['entityId'], metadata['idp']['entityId'])
         self.assertDictEqual(
             idp_data['singleSignOnService'],
@@ -109,7 +109,7 @@ class TestIdpMetadata(FunctionalTesting):
         to be reflected in the security part. We want to handle this manually.
         So check for no changes there
         """
-        metadata = self.plugin.load_and_clean_settings()
+        metadata = self.plugin.load_settings()
         old_value = metadata['security']['authnRequestsSigned']
         self.assertFalse(old_value, 'Old value should be false')
 
@@ -119,6 +119,6 @@ class TestIdpMetadata(FunctionalTesting):
         self.browser.getControl(name='form.buttons.get_and_store').click()
 
         self.assertFalse(
-            self.plugin.load_and_clean_settings()['security']['authnRequestsSigned'],
+            self.plugin.load_settings()['security']['authnRequestsSigned'],
             'New value should be false as well.'
         )
