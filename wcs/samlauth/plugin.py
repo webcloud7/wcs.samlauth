@@ -54,6 +54,7 @@ class SamlAuthPlugin(BasePlugin):
     settings_sp = json.dumps(json.loads(clean_for_json(DEFAULT_SP_SETTINGS)), indent=4)
     settings_idp = json.dumps(json.loads(clean_for_json(DEFAULT_IDP_SETTINGS)), indent=4)
     advanced = json.dumps(json.loads(clean_for_json(ADVANCED_SETTINGS)), indent=4)
+    adfs_as_idp = False
 
     _properties = (
         dict(id='create_session', label='Create Plone Session', type='boolean', mode='w'),
@@ -63,6 +64,7 @@ class SamlAuthPlugin(BasePlugin):
         dict(id='settings_sp', label='SP (plone) Settings', type='text', mode='w'),
         dict(id='settings_idp', label='IDP Settings', type='text', mode='w'),
         dict(id='advanced', label='Advanced', type='text', mode='w'),
+        dict(id='adfs_as_idp', label='Check this box if ADFS is the IDP', type='boolena', mode='w'),
     )
 
     def __init__(self, id_, title=None):

@@ -63,3 +63,18 @@ class TestLoginWithSpSignatureAndSignedMetadata(FunctionalTesting):
     def test_no_login_without_client_cert(self):
         with self.assertRaises(AssertionError):
             self._login_keycloak_test_user()
+
+
+class TestAdfsSamlRequest(FunctionalTesting):
+    def test_adfs_saml_flag(self):
+        login_view = self.plugin.restrictedTraverse('sls')
+        self.assertFalse(
+            login_view._prepare_request().get('lowercase_urlencoding'),
+            'lowercase_urlencoding should not be present'
+        )
+
+        self.plugin.manage_changeProperties(adfs_as_idp=True)
+        login_view = self.plugin.restrictedTraverse('sls')
+        self.assertTrue(
+            login_view._prepare_request().get('lowercase_urlencoding'),
+            'lowercase_urlencoding should be there')

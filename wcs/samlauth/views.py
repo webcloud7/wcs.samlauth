@@ -22,15 +22,18 @@ class BaseSamlView(BrowserView):
 
     def _prepare_request(self):
         url = urlparse(self.request.URL)
-        return {
+        request = {
             'https': 'on' if url.scheme == 'https' else 'off',
             'http_host': url.netloc,
             'script_name': self.request.PATH_INFO,
             'get_data': self.request.form.copy(),
-            # Uncomment if using ADFS as IdP, https://github.com/onelogin/python-saml/pull/144
-            # 'lowercase_urlencoding': True,
             'post_data': self.request.form.copy()
         }
+        # if using ADFS as IdP, https://github.com/onelogin/python-saml/pull/144
+        # 'lowercase_urlencoding': True,
+        if self.context.getProperty('adfs_as_idp'):
+            request['lowercase_urlencoding'] = True
+        return request
 
     def _update_settings(self):
         """Update SP settings with dynamic values"""
