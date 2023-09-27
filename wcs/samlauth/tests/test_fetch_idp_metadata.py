@@ -1,6 +1,4 @@
 from wcs.samlauth.tests import FunctionalTesting
-from wcs.samlauth.utils import PLUGIN_ID
-import transaction
 import json
 
 

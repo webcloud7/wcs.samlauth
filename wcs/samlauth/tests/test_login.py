@@ -2,7 +2,7 @@ from plone import api
 from plone.app.testing import TEST_USER_ID
 from plone.restapi.setuphandlers import install_pas_plugin as install_api_jwt_plugin
 from wcs.samlauth.tests import FunctionalTesting
-from wcs.samlauth.utils import PLUGIN_ID
+from wcs.samlauth.views import SAML_AUTHN_REQUEST_COOKIE_NAME
 import requests
 import transaction
 
@@ -161,3 +161,31 @@ class TestLogin(FunctionalTesting):
         session, url = self._login_keycloak_test_user(url=prefs_url)
         self.assertTrue(session.get('__ac'), 'Expect a plone session')
         self.assertEqual(prefs_url, url)
+
+    def test_login_and_validate_auth_n_request(self):
+        self.plugin.manage_changeProperties(validate_authn_request=True)
+        transaction.commit()
+
+        login_form_redirect = requests.get(
+            self.plugin.absolute_url() + '/sls',
+            allow_redirects=False)
+        self.assertIn(SAML_AUTHN_REQUEST_COOKIE_NAME, login_form_redirect.cookies)
+        login_form = requests.get(login_form_redirect.headers['Location'])
+        url_login = self._find_content(login_form.content, 'form').attrs['action']
+        login_acs = requests.post(
+            url_login,
+            data={'username': ' testuser@webcloud7.ch', 'password': '12345'},
+            cookies=login_form.cookies
+        )
+
+        url_acs = self._find_content(login_acs.content, 'form').attrs['action']
+        input_elements = self._find_content(login_acs.content, 'input[type=hidden]', 'select')
+        auth_redirect = requests.post(
+            url_acs,
+            data={element.attrs['name']: element.attrs['value'] for element in input_elements},
+            cookies=login_form_redirect.cookies,
+            allow_redirects=False
+        )
+
+        assert 'Location' in auth_redirect.headers, 'Expect a redirect'
+        self.assertNotIn(SAML_AUTHN_REQUEST_COOKIE_NAME, auth_redirect.cookies)

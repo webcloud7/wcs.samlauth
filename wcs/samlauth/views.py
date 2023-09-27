@@ -57,16 +57,17 @@ class LoginView(BaseSamlView):
                 return f'SAML SP configuration error: {str(error)}'
             return 'SAML SP configuration not valid, please check logs'
 
-        if auth.get_last_request_id():
+        return_url = self.request.get('came_from', None)
+        if not return_url:
+            return_url = api.portal.get().absolute_url()
+        login_url = auth.login(return_to=return_url)
+
+        if auth.get_last_request_id() and self.context.getProperty('validate_authn_request', False):
             self.request.response.setCookie(
                 SAML_AUTHN_REQUEST_COOKIE_NAME,
                 auth.get_last_request_id()
             )
-
-        url = self.request.get('came_from', None)
-        if not url:
-            url = api.portal.get().absolute_url()
-        return self.request.RESPONSE.redirect(auth.login(return_to=url))
+        return self.request.RESPONSE.redirect(login_url)
 
 
 class CallbackView(BaseSamlView):
