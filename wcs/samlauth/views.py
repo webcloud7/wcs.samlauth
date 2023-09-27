@@ -1,4 +1,5 @@
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
+from onelogin.saml2.auth import OneLogin_Saml2_Utils
 from onelogin.saml2.errors import OneLogin_Saml2_Error
 from plone import api
 from Products.Five.browser import BrowserView
@@ -58,7 +59,11 @@ class LoginView(BaseSamlView):
                 SAML_AUTHN_REQUEST_COOKIE_NAME,
                 auth.get_last_request_id()
             )
-        return self.request.RESPONSE.redirect(auth.login())
+
+        url = self.request.get('came_from', None)
+        if not url:
+            url = api.portal.get().absolute_url()
+        return self.request.RESPONSE.redirect(auth.login(return_to=url))
 
 
 class CallbackView(BaseSamlView):
@@ -80,7 +85,19 @@ class CallbackView(BaseSamlView):
             self.request.response.expireCookie(SAML_AUTHN_REQUEST_COOKIE_NAME)
 
         self.context.remember_identity(auth)
-        return self.request.response.redirect(api.portal.get().absolute_url())
+
+        return self.request.response.redirect(self.get_redirect_url())
+
+    def get_redirect_url(self):
+        if 'RelayState' in self.request.form:
+            relay_state = self.request.form['RelayState']
+            allowed_hosts = [self.saml_request['http_host']]
+            allowed_hosts.extend(
+                list(self.context.getProperty('allowed_redirect_hosts', ()))
+            )
+            if urlparse(relay_state).netloc in allowed_hosts:
+                return relay_state
+        return api.portal.get().absolute_url()
 
 
 class LogoutView(BaseSamlView):
@@ -103,7 +120,7 @@ class MetadataView(BaseSamlView):
         saml_settings = auth.get_settings()
         metadata = saml_settings.get_sp_metadata()
         errors = saml_settings.validate_metadata(metadata)
-        
+
         if len(errors) == 0:
             self.request.response.setHeader('Content-Type', 'application/xml')
             return metadata

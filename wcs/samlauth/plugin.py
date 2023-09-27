@@ -50,6 +50,7 @@ class SamlAuthPlugin(BasePlugin):
     create_session = True
     create_api_session = False
     create_user = True
+    allowed_redirect_hosts = ()
     settings_sp = json.dumps(json.loads(clean_for_json(DEFAULT_SP_SETTINGS)), indent=4)
     settings_idp = json.dumps(json.loads(clean_for_json(DEFAULT_IDP_SETTINGS)), indent=4)
     advanced = json.dumps(json.loads(clean_for_json(ADVANCED_SETTINGS)), indent=4)
@@ -58,6 +59,7 @@ class SamlAuthPlugin(BasePlugin):
         dict(id='create_session', label='Create Plone Session', type='boolean', mode='w'),
         dict(id='create_api_session', label='Create API Session', type='boolean', mode='w'),
         dict(id='create_user', label='Create User', type='boolean', mode='w'),
+        dict(id='allowed_redirect_hosts', label='Allowed hosts to redirect to', type='lines', mode='w'),
         dict(id='settings_sp', label='SP (plone) Settings', type='text', mode='w'),
         dict(id='settings_idp', label='IDP Settings', type='text', mode='w'),
         dict(id='advanced', label='Advanced', type='text', mode='w'),

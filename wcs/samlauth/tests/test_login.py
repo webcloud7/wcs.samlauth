@@ -115,3 +115,35 @@ class TestLogin(FunctionalTesting):
 
         jwt_cookie = session_cookie.get('auth_token')
         self.assertTrue(jwt_cookie, 'Expect api jwt session cookie')
+
+    def test_redirect_after_login(self):
+        page = api.content.create(
+            container=self.portal,
+            id='testpage',
+            type='Document',
+            title='Testpage'
+        )
+        session, url = self._login_keycloak_test_user(
+            came_from=page.absolute_url()
+        )
+
+        self.assertTrue(session.get('__ac'), 'Expect a plone session')
+        self.assertEqual(page.absolute_url(), url)
+
+    def test_redirect_to_external_site_not_possible_by_default(self):
+        session, url = self._login_keycloak_test_user(
+            came_from='https://www.someexternalsite.com'
+        )
+
+        self.assertTrue(session.get('__ac'), 'Expect a plone session')
+        self.assertEqual(api.portal.get().absolute_url(), url)
+
+    def test_redirect_to_external_with_explicit_allow_host_list(self):
+        self.plugin.manage_changeProperties(allowed_redirect_hosts=('www.myfrontend.com', ))
+        transaction.commit()
+        session, url = self._login_keycloak_test_user(
+            came_from='https://www.myfrontend.com/demo'
+        )
+
+        self.assertTrue(session.get('__ac'), 'Expect a plone session')
+        self.assertEqual('https://www.myfrontend.com/demo', url)

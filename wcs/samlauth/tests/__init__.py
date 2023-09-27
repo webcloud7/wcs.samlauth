@@ -84,8 +84,11 @@ class FunctionalTesting(TestCase):
         find = operator.methodcaller(method, query)
         return find(soup)
 
-    def _login_keycloak_test_user(self):
-        login_form = requests.get(self.plugin.absolute_url() + '/sls')
+    def _login_keycloak_test_user(self, came_from=None):
+        url = self.plugin.absolute_url() + '/sls'
+        if came_from:
+            url += '?came_from=' + came_from
+        login_form = requests.get(url)
         assert login_form.url.startswith('http://localhost:8000/realms/saml-test/protocol/saml'), (
             'Expect a redirect to keycloak, but got: ' + login_form.url)
         assert bool(self._find_content(login_form.content, 'form')), 'Expect a form element'
@@ -104,6 +107,6 @@ class FunctionalTesting(TestCase):
             allow_redirects=False
         )
         session_cookie = auth_redirect.cookies
-        assert 'Location' in auth_redirect.headers, 'Expect a redirect to plone'
+        assert 'Location' in auth_redirect.headers, 'Expect a redirect'
         url = auth_redirect.headers['Location']
         return session_cookie, url
