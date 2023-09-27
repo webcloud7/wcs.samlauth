@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from onelogin.saml2.utils import OneLogin_Saml2_Utils
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
 from plone.app.testing import TEST_USER_NAME
@@ -8,9 +9,11 @@ from unittest import TestCase
 from wcs.samlauth.testing import SAMLAUTH_FUNCTIONAL_TESTING
 from wcs.samlauth.utils import install_plugin
 from wcs.samlauth.utils import PLUGIN_ID
+import json
 import operator
-import transaction
+import os
 import requests
+import transaction
 
 
 class FunctionalTesting(TestCase):
@@ -42,6 +45,35 @@ class FunctionalTesting(TestCase):
             browser.getControl(name='__ac_password').value = TEST_USER_PASSWORD
             browser.getControl(name='buttons.login').click()
         return browser
+
+    def setup_realm(self, filename='saml-test-realm.json'):
+        self.layer['delete_realm']()
+        self.layer['create_realm'](filename=filename)
+
+    def setup_sp_certificate(self):
+        settings_sp = json.loads(self.plugin.getProperty('settings_sp'))
+
+        cert_path = os.path.join(os.path.dirname(__file__), 'assets', 'sp.cer')
+        with open(cert_path, 'r') as cert:
+            settings_sp['sp']['x509cert'] = OneLogin_Saml2_Utils.format_cert(cert.read(), heads=False)
+
+        private_key_path = os.path.join(os.path.dirname(__file__), 'assets', 'sp_private_key')
+        with open(private_key_path, 'r') as private_key:
+            settings_sp['sp']['privateKey'] = OneLogin_Saml2_Utils.format_private_key(private_key.read(), heads=False)
+
+        self.plugin.manage_changeProperties(settings_sp=json.dumps(settings_sp))
+        transaction.commit()
+
+    def restore_default_realm(self):
+        self.layer['delete_realm']()
+        self.layer['create_realm'](filename='saml-test-realm.json')
+
+    def fetch_metadata_from_idp(self):
+        self.browser = self.get_browser()
+        self.browser.open(self.plugin.absolute_url() + '/idp_metadata')
+        self.browser.getControl(
+            name='form.widgets.metadata_url').value = self.idp_metadata_url
+        self.browser.getControl(name='form.buttons.get_and_store').click()
 
     def _create_plugin(self):
         install_plugin()
