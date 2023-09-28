@@ -23,6 +23,7 @@ setup(
     version="1.0.0.dev0",
     description="SAML authentication for plone sites",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     classifiers=[
         "Environment :: Web Environment",
         "Framework :: Plone",
