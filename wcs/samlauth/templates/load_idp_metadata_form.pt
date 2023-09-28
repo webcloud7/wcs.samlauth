@@ -11,6 +11,7 @@
             <metal:form use-macro="context/@@ploneform-macros/titlelessform">
                 <metal:slot fill-slot="fields">
                     <div tal:content="structure view/widgets/metadata_url/@@ploneform-render-widget" />
+                    <div tal:content="structure view/widgets/metadata_file/@@ploneform-render-widget" />
                     <metal:block use-macro="context/@@ploneform-macros/actions"/>
 
                     <div class="idp-data" tal:condition="view/idp_data">

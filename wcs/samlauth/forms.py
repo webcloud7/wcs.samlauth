@@ -1,3 +1,5 @@
+from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
+from plone.namedfile.field import NamedFile
 from plone.z3cform.layout import wrap_form
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from Products.statusmessages.interfaces import IStatusMessage
@@ -9,6 +11,7 @@ from z3c.form.interfaces import WidgetActionExecutionError
 from zope import schema
 from zope.interface import Interface
 from zope.interface import Invalid
+from zope.interface import invariant
 from zope.schema.interfaces import InvalidURI
 import json
 
@@ -30,8 +33,18 @@ class ILoadIdpMetadataSchema(Interface):
     metadata_url = schema.TextLine(
         title=_('label_metadata_url', default='IDP Metadata URL'),
         constraint=valid_url,
-        required=True
+        required=False,
     )
+
+    metadata_file = NamedFile(
+        title=_('label_metadata_file', default='IDP Metadata File (XML)'),
+        required=False,
+    )
+
+    @invariant
+    def has_either_one(form):
+        if not form.metadata_url and not form.metadata_file:
+            raise Invalid("Provide a URL or a metadata xml")
 
 
 class LoadIdPMetadataForm(form.Form):
@@ -50,8 +63,15 @@ class LoadIdPMetadataForm(form.Form):
         if errors:
             return
 
-        self.idp_data = self._fetch_metadata(data['metadata_url'])
-        msg = _('text_get', default=u'IDP Data has been fetched')
+        if data['metadata_url']:
+            self.idp_data = self._fetch_metadata(data['metadata_url'])
+            msg = _('text_get', default=u'IDP Data has been fetched')
+        elif data['metadata_file']:
+            self.idp_data = self._parse_metadata(data['metadata_file'])
+            msg = _('text_get', default=u'IDP Data has been uploaded')
+        else:
+            raise
+
         IStatusMessage(self.request).addStatusMessage(msg, type='info')
 
     @button.buttonAndHandler(_(u'label_get_and_metadata', default=u'Get and store metadata'), name='get_and_store')
@@ -60,14 +80,22 @@ class LoadIdPMetadataForm(form.Form):
         if errors:
             return
 
-        self.idp_data = self._fetch_metadata(data['metadata_url'])
+        if data['metadata_url']:
+            self.idp_data = self._fetch_metadata(data['metadata_url'])
+            msg = _(
+                'text_get_and_store',
+                default=u'IDP/SP Data has been fetched and stored in plugin settings.'
+            )
+        elif data['metadata_file']:
+            self.idp_data = self._parse_metadata(data['metadata_file'])
+            msg = _(
+                'text_get_and_store',
+                default=u'IDP/SP Data has been uploaded and stored in plugin settings.'
+            )
+
         updated_data = self.context._update_metadata(self.idp_data)
         self.context.store(updated_data)
 
-        msg = _(
-            'text_get_and_store',
-            default=u'IDP/SP Data has been fetched and stored in plugin settings.'
-        )
         IStatusMessage(self.request).addStatusMessage(msg, type='info')
 
     def formatted_idp_metadata(self):
@@ -89,6 +117,9 @@ class LoadIdPMetadataForm(form.Form):
                       mapping={'error': str(e)})
                 )
             )
+
+    def _parse_metadata(self, file_):
+        return OneLogin_Saml2_IdPMetadataParser.parse(file_.data)
 
 
 LoadIdPMetadataView = wrap_form(LoadIdPMetadataForm)

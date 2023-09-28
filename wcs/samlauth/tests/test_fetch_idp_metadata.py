@@ -1,5 +1,7 @@
 from wcs.samlauth.tests import FunctionalTesting
 import json
+import requests
+import io
 
 
 class TestIdpMetadata(FunctionalTesting):
@@ -74,6 +76,42 @@ class TestIdpMetadata(FunctionalTesting):
         sp_data = json.loads(code_element.text)['sp']
         self.assertEqual('urn:oasis:names:tc:SAML:2.0:nameid-format:persistent',
                          sp_data['NameIDFormat'])
+
+    def test_upload_metadata(self):
+        xml = io.BytesIO(requests.get(self.idp_metadata_url).content).read()
+        self.browser.open(self.plugin.absolute_url() + '/idp_metadata')
+        self.assertEqual(self.browser._response._status, '200 OK')
+        file_ctl = self.browser.getControl(name="form.widgets.metadata_file")
+        file_ctl.add_file(xml, "applocation/xml", "metadata.xml")
+        self.browser.getControl(name='form.buttons.get').click()
+
+        code_element = self._find_content(self.browser.contents, '.idp-data code')
+        idp_data = json.loads(code_element.text)['idp']
+        self.assertEqual(
+            'http://localhost:8000/realms/saml-test',
+            idp_data['entityId']
+        )
+        self.assertEqual(
+            'http://localhost:8000/realms/saml-test/protocol/saml',
+            idp_data['singleSignOnService']['url']
+        )
+        self.assertEqual(
+            'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+            idp_data['singleSignOnService']['binding']
+        )
+        self.assertEqual(
+            'http://localhost:8000/realms/saml-test/protocol/saml',
+            idp_data['singleLogoutService']['url']
+        )
+        self.assertEqual(
+            'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+            idp_data['singleLogoutService']['binding']
+        )
+        self.assertIn('x509cert', idp_data, 'Expext a cert in idp data')
+
+        sp_data = json.loads(code_element.text)['sp']
+        self.assertEqual('urn:oasis:names:tc:SAML:2.0:nameid-format:persistent',
+                         sp_data['NameIDFormat'])        
 
     def test_save_idp_and_sp_data(self):
         self.browser.open(self.plugin.absolute_url() + '/idp_metadata')
