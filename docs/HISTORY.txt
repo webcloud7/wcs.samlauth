@@ -2,7 +2,7 @@ Changelog
 =========
 
 
-1.0.0a3 (unreleased)
+1.0.0a3 (2023-09-28)
 --------------------
 
 - Fix typo for boolean property. [mathias.leimgruber]
