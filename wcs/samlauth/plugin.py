@@ -76,9 +76,12 @@ class SamlAuthPlugin(BasePlugin):
     def remember_identity(self, auth):
         user_id = auth.get_nameid()
         userinfo = auth.get_friendlyname_attributes()
+        if not userinfo:
+            userinfo = auth.get_attributes()
         pas = self._getPAS()
         if pas is None:
             return
+
         user = pas.getUserById(user_id)
         if self.getProperty("create_user"):
             if user is None:
