@@ -66,7 +66,7 @@ class SamlAuthPlugin(BasePlugin):
         dict(id='settings_sp', label='SP (plone) Settings', type='text', mode='w'),
         dict(id='settings_idp', label='IDP Settings', type='text', mode='w'),
         dict(id='advanced', label='Advanced', type='text', mode='w'),
-        dict(id='adfs_as_idp', label='Check this box if ADFS is the IDP', type='boolena', mode='w'),
+        dict(id='adfs_as_idp', label='Check this box if ADFS is the IDP', type='boolean', mode='w'),
     )
 
     def __init__(self, id_, title=None):

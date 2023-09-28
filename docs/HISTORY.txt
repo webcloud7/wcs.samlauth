@@ -5,7 +5,7 @@ Changelog
 1.0.0a3 (unreleased)
 --------------------
 
-- Nothing changed yet.
+- Fix typo for boolean property. [mathias.leimgruber]
 
 
 1.0.0a2 (2023-09-28)
