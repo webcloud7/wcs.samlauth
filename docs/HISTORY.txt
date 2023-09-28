@@ -2,7 +2,7 @@ Changelog
 =========
 
 
-1.0.0a1 (unreleased)
+1.0.0a1 (2023-09-28)
 --------------------
 
 - Init release [mathias.leimgruber]
