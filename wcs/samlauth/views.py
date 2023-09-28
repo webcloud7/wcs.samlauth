@@ -1,10 +1,12 @@
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.errors import OneLogin_Saml2_Error
 from plone import api
+from plone.protect.interfaces import IDisableCSRFProtection
 from Products.Five.browser import BrowserView
 from urllib.parse import quote
 from urllib.parse import urlparse
 from zExceptions import BadRequest
+from zope.interface import alsoProvides
 import logging
 
 
@@ -72,6 +74,7 @@ class LoginView(BaseSamlView):
 
 class CallbackView(BaseSamlView):
     def __call__(self):
+        alsoProvides(self.request, IDisableCSRFProtection)
         auth = OneLogin_Saml2_Auth(self.saml_request, self.settings)
         request_id = None
 

@@ -5,7 +5,7 @@ Changelog
 1.0.0a2 (unreleased)
 --------------------
 
-- Nothing changed yet.
+- Disable csrf protection on acs (callback view). [mathias.leimgruber]
 
 
 1.0.0a1 (2023-09-28)
