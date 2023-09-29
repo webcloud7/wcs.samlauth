@@ -13,7 +13,7 @@ Make it as easy as possible to configure plone as a SP (Service Provider), witho
 
 ## TL;DR
 
-1. Install wcs.adminauth plugin
+1. Install wcs.samlauth plugin
 2. Add PAS plugin via ZMI (in acl_users)
 3. Go to http://localhost:8080/Plone/acl_users/saml/idp_metadata
 4. Fetch or upload IDP metadata -> Click "Get and store metadata"
