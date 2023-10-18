@@ -34,9 +34,13 @@ This enables you to add multiple saml plugins as well.
 See [python3-saml](https://github.com/SAML-Toolkits/python3-saml)
 Make especially sure the following packages can be installed, since the have some system dependencies as well:
 
-- xmlsec
-- lxml
+- [xmlsec](https://pypi.org/project/xmlsec/)
+- [lxml](https://pypi.org/project/lxml/)
 
+For example, on a recent Ubuntu, you should run:
+```shell
+apt install pkg-config libxml2-dev libxmlsec1-dev libxmlsec1-openssl
+```
 
 ## Endpoints
 
