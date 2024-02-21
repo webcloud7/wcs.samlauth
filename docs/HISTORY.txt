@@ -5,7 +5,7 @@ Changelog
 1.0.0a4 (unreleased)
 --------------------
 
-- Nothing changed yet.
+- Do not use SCRIPT_NAME for the callback URL. [mathias.leimgruber]
 
 
 1.0.0a3 (2023-09-28)
