@@ -2,7 +2,7 @@ Changelog
 =========
 
 
-1.0.0a4 (unreleased)
+1.0.0a4 (2024-02-20)
 --------------------
 
 - Do not use SCRIPT_NAME for the callback URL. [mathias.leimgruber]
