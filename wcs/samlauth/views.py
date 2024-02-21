@@ -27,7 +27,7 @@ class BaseSamlView(BrowserView):
         request = {
             'https': 'on' if url.scheme == 'https' else 'off',
             'http_host': url.netloc,
-            'script_name': self.request.PATH_INFO,
+            'script_name': url.path,
             'get_data': self.request.form.copy(),
             'post_data': self.request.form.copy()
         }
