@@ -4,7 +4,7 @@ wcs.samlauth is a saml authentication plugin based on python3-saml for plone 6.
 It turns your plone site into a SP (Service Provider).
 IDP (Identity Provider) is not supported.
 
-The package is tested with plone 6 and python 3.11. It does not officially support other versions.
+The package is tested with plone 6.x and python 3.11/3.12. It does not officially support other versions.
 
 ## Goal
 

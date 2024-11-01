@@ -2,10 +2,10 @@ Changelog
 =========
 
 
-1.0.0a5 (unreleased)
+1.0.0b1 (unreleased)
 --------------------
 
-- Nothing changed yet.
+- Support Plone 6.1 and Python 3.12. [mathias.leimgruber]
 
 
 1.0.0a4 (2024-02-20)
