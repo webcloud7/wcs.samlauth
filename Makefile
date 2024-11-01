@@ -181,7 +181,7 @@ ${INSTALL_TARGET}: ${PREPARE_TARGET}
 COOKIECUTTER_SENTINEL=${SENTINELFOLDER}pip-cookiecutter.sentinel
 ${COOKIECUTTER_SENTINEL}:
 	@echo "$(OK_COLOR)Install cookiecutter$(NO_COLOR)"
-	@${PYBIN}pip install git+https://github.com/cookiecutter/cookiecutter.git#egg=cookiecutter
+	@${PYBIN}pip install cookiecutter
 	@touch ${COOKIECUTTER_SENTINEL}
 
 ${INSTANCE_YAML}:
