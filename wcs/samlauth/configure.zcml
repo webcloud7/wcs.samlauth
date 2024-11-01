@@ -5,6 +5,8 @@
     xmlns:five="http://namespaces.zope.org/five"
     i18n_domain="wcs.samlauth">
 
+    <include package="Products.CMFCore" file="permissions.zcml" />
+
     <five:registerPackage package="." initialize=".initialize" />
 
     <browser:page

@@ -5,11 +5,12 @@ from zope.i18nmessageid import MessageFactory
 
 
 _ = MessageFactory("wcs.samlauth")
-registerMultiPlugin(plugin.SamlAuthPlugin.meta_type)
 
 
 def initialize(context):
     """Initializer called when used as a Zope 2 product."""
+
+    registerMultiPlugin(plugin.SamlAuthPlugin.meta_type)
 
     context.registerClass(
         plugin.SamlAuthPlugin,

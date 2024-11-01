@@ -134,7 +134,7 @@ class BaseDockerServiceLayer(Layer):
 class KeyCloakLayer(BaseDockerServiceLayer):
     name = "Keycloak service"
     container_name = 'keycloak_test'
-    image_name = 'quay.io/keycloak/keycloak:22.0.2'
+    image_name = 'quay.io/keycloak/keycloak:24.0.2'
     port = '8000:8080'
     env = {
         'KEYCLOAK_ADMIN': 'admin',
