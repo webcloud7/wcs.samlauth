@@ -6,6 +6,7 @@ workflows:
     jobs:
       - plone6py311
       - plone61py312
+      - plone61py313
 
 jobs:
 
@@ -34,7 +35,28 @@ jobs:
   plone61py312:
     resource_class: medium
     docker:
-      - image: webcloud7/plone-test:6.1.0a5-py312
+      - image: webcloud7/plone-test:6.1.1-py312
+      - image: webcloud7/keycloak-test:24.0.2
+        environment:
+        - KEYCLOAK_ADMIN: 'admin'
+        - KEYCLOAK_ADMIN_PASSWORD: 'admin'
+        - KC_HEALTH_ENABLED: 'true'
+        - KC_METRICS_ENABLED: 'true'
+
+    environment:
+      PIP_FIND_LINKS: /wheelhouse/
+      zope_i18n_compile_mo_files: "true"
+      WSGI_SERVER_PORT: 65035
+
+    steps:
+      - checkout
+      - run: apt-get update && apt-get install -y pkg-config libxml2-dev libxmlsec1-dev libxmlsec1-openssl
+      - run: make test VENV_FOLDER=.
+
+  plone61py313:
+    resource_class: medium
+    docker:
+      - image: webcloud7/plone-test:6.1.1-py313
       - image: webcloud7/keycloak-test:24.0.2
         environment:
         - KEYCLOAK_ADMIN: 'admin'
