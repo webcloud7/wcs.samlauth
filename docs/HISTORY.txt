@@ -2,10 +2,10 @@ Changelog
 =========
 
 
-1.0.0b2 (unreleased)
+1.0.0 (unreleased)
 --------------------
 
-- Nothing changed yet.
+- Update classifiers and make official first stable release. [mathias.leimgruber]
 
 
 1.0.0b1 (2024-11-01)
