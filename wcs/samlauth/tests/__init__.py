@@ -97,7 +97,7 @@ class FunctionalTesting(TestCase):
         url_login = self._find_content(login_form.content, 'form').attrs['action']
         login_acs = requests.post(
             url_login,
-            data={'username': ' testuser@webcloud7.ch', 'password': '12345'},
+            data={'username': 'testuser@webcloud7.ch', 'password': '12345'},
             cookies=login_form.cookies
         )
         url_acs = self._find_content(login_acs.content, 'form').attrs['action']

@@ -12,13 +12,15 @@ from secrets import choice
 from wcs.samlauth.default_settings import ADVANCED_SETTINGS
 from wcs.samlauth.default_settings import DEFAULT_IDP_SETTINGS
 from wcs.samlauth.default_settings import DEFAULT_SP_SETTINGS
+from wcs.samlauth.interfaces import ISAMLUserPropertiesMutator
 from wcs.samlauth.utils import clean_for_json
-from wcs.samlauth.utils import make_string
 from ZODB.POSException import ConflictError
+from zope.component import getAdapters
 from zope.interface import Interface
 import json
 import logging
 import string
+
 
 logger = logging.getLogger(__name__)
 PWCHARS = string.ascii_letters + string.digits + string.punctuation
@@ -126,21 +128,17 @@ class SamlAuthPlugin(BasePlugin):
         This is utilised when first creating a user, and to update
         their information when logging in again later.
         """
-
-        userProps = {}
-        if "email" in userinfo:
-            userProps["email"] = make_string(userinfo["email"])
-        if "givenName" in userinfo and "surname" in userinfo:
-            userProps["fullname"] = "{} {}".format(
-                make_string(userinfo["givenName"]), make_string(userinfo["surname"])
-            )
-        elif "name" in userinfo and "surname" in userinfo:
-            userProps["fullname"] = "{} {}".format(
-                make_string(userinfo["name"]), make_string(userinfo["surname"])
-            )
-
-        if userProps:
-            user.setProperties(**userProps)
+        properties = {}
+        mutators = list(getAdapters((self, api.portal.get().REQUEST), ISAMLUserPropertiesMutator))
+        mutators.sort(key=lambda adapter: adapter[1]._order)
+        for mutator in mutators:
+            try:
+                mutator[1].mutate(user, userinfo, properties)
+            except Exception as e:
+                logger.error(f"Error in user properties mutator: {e}")
+                continue
+        if properties:
+            user.setProperties(**properties)
 
     def _generatePassword(self):
         """Return a obfuscated password never used for login"""

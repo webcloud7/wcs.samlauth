@@ -70,6 +70,7 @@ Given the ID of the SAML plugin is "saml":
 - E2E tests with Keykloak as IDP in different configuration variations
 - Manually tested with Azure AD as IDP
 - Documentation use azure and keycloak as IDP
+- Configure attribute mapping via ISAMLUserPropertiesMutator adapters.
 
 
 ## Installation
@@ -112,6 +113,47 @@ $ git clone git@github.com:webcloud7/wcs.samlauth.git && cd wcs.samlauth
 $ make install
 $ make run
 ```
+
+## Custom attribute mapping
+
+With version 1.1.0 wcs.samlauth now supports the mapping of custom saml attributes to plone user properties.
+
+Example:
+```
+from wcs.samlauth.interfaces import ISAMLUserPropertiesMutator
+from wcs.samlauth.plugin import ISamlAuthPlugin
+from wcs.samlauth.utils import make_string
+from zope.component import adapter
+from zope.interface import implementer
+from zope.interface import Interface
+
+
+@implementer(ISAMLUserPropertiesMutator)
+@adapter(ISamlAuthPlugin, Interface)
+class PhoneUserPropertiesMutator:
+
+    _order = 2
+
+    def __init__(self, plugin, request):
+        self.plugin = plugin
+        self.request = request
+
+    def mutate(self, user, userinfo, properties):
+        if "Phone" in userinfo:
+            properties["phone"] = make_string(userinfo["Phone"])
+```
+
+ZCML:
+```
+<adapter factory="PhoneUserPropertiesMutator"/>
+```
+
+A default adapter, which supports mapping email and fullname is registered by the plugin.
+Any other attributes need to be implemented via custom adapters.
+
+You can register multiple adapters and you can also override the values given
+by the default adapter. Just make sure `_order` attribut on the adapter is higher than 1.
+
 
 
 # Test
