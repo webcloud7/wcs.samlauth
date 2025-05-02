@@ -2,7 +2,7 @@ Changelog
 =========
 
 
-1.0.1 (unreleased)
+1.1.0 (2025-05-02)
 ------------------
 
 - Add ISAMLUserPropertiesMutator interface to allow custom user properties. [mathias.leimgruber]
