@@ -1,17 +1,9 @@
-from Acquisition import aq_base
-from plone.app.testing import applyProfile
 from plone.app.testing import FunctionalTesting
 from plone.app.testing import PLONE_FIXTURE
 from plone.app.testing import PloneSandboxLayer
-from plone.app.testing import setRoles
-from plone.app.testing import TEST_USER_ID
-from plone.namedfile.file import NamedBlobImage
 from plone.testing import Layer
 from plone.testing.zope import installProduct
 from plone.testing.zope import WSGI_SERVER_FIXTURE
-from Products.CMFPlone.tests.utils import MockMailHost
-from Products.MailHost.interfaces import IMailHost
-from zope.component import getSiteManager
 from zope.configuration import xmlconfig
 import logging
 import os
