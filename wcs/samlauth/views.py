@@ -96,6 +96,7 @@ class CallbackView(BaseSamlView):
         return self.request.response.redirect(self.get_redirect_url())
 
     def get_redirect_url(self):
+        url = api.portal.get().absolute_url()
         if 'RelayState' in self.request.form:
             relay_state = self.request.form['RelayState']
             allowed_hosts = [self.saml_request['http_host']]
@@ -103,8 +104,15 @@ class CallbackView(BaseSamlView):
                 list(self.context.getProperty('allowed_redirect_hosts', ()))
             )
             if urlparse(relay_state).netloc in allowed_hosts:
-                return relay_state
-        return api.portal.get().absolute_url()
+                url = relay_state
+
+        create_api_session = self.context.getProperty("create_api_session")
+        include_api_token = self.context.getProperty("include_api_token_in_redirect")
+        if include_api_token and create_api_session:
+            token = self.request.RESPONSE.cookies.get('auth_token', None)
+            if token:
+                url += f'?auth_token={token["value"]}'
+        return url
 
 
 class IdpLogoutView(BaseSamlView):
