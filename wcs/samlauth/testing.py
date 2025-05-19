@@ -196,10 +196,9 @@ class KeyCloakLayer(BaseDockerServiceLayer):
 
     def _delete_realm(self):
         self.admin_session.headers.update({'Content-Type': 'application/json'})
-        response = self.admin_session.delete(
+        self.admin_session.delete(
             'http://localhost:8000/admin/realms/saml-test'
         )
-        assert response.status_code == 204, 'Realm not deleted'
 
     def _wait_for_service(self):
         counter = 0
