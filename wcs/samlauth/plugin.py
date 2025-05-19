@@ -51,6 +51,7 @@ class SamlAuthPlugin(BasePlugin):
 
     create_session = True
     create_api_session = False
+    include_api_token_in_redirect = False
     create_user = True
     validate_authn_request = False
     allowed_redirect_hosts = ()
@@ -62,6 +63,7 @@ class SamlAuthPlugin(BasePlugin):
     _properties = (
         dict(id='create_session', label='Create Plone Session', type='boolean', mode='w'),
         dict(id='create_api_session', label='Create API Session', type='boolean', mode='w'),
+        dict(id='include_api_token_in_redirect', label='Include API token in redirect', type='boolean', mode='w'),
         dict(id='create_user', label='Create User', type='boolean', mode='w'),
         dict(id='validate_authn_request', label='Validate AuthN requests via cookie', type='boolean', mode='w'),
         dict(id='allowed_redirect_hosts', label='Allowed hosts to redirect to', type='lines', mode='w'),

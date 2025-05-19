@@ -71,6 +71,7 @@ Given the ID of the SAML plugin is "saml":
 - Manually tested with Azure AD as IDP
 - Documentation use azure and keycloak as IDP
 - Configure attribute mapping via ISAMLUserPropertiesMutator adapters.
+- Expose generated api token via redirect url (Potential security risk, only use it if you know what you are doing).
 
 
 ## Installation

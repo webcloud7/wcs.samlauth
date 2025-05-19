@@ -148,6 +148,23 @@ class TestLogin(FunctionalTesting):
         self.assertTrue(session.get('__ac'), 'Expect a plone session')
         self.assertEqual('https://www.myfrontend.com/demo', url)
 
+    def test_token_in_redirect(self):
+        install_api_jwt_plugin(self.portal)
+        self.plugin.manage_changeProperties(
+            allowed_redirect_hosts=('www.myfrontend.com', ),
+            create_api_session=True,
+            include_api_token_in_redirect=True)
+        transaction.commit()
+        session, url = self._login_keycloak_test_user(
+            came_from='https://www.myfrontend.com/demo'
+        )
+
+        self.assertTrue(session.get('__ac'), 'Expect a plone session')
+        self.assertTrue(session.get('auth_token'), 'Expect a jwt session cookie')
+
+        token = session.get('auth_token')
+        self.assertEqual(f'https://www.myfrontend.com/demo?auth_token={token}', url)
+
     def test_challenge_plugin(self):
         prefs_url = api.portal.get().absolute_url() + '/@@personal-preferences'
         response_login_page = requests.get(prefs_url)
