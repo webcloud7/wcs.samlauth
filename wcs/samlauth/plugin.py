@@ -12,10 +12,12 @@ from secrets import choice
 from wcs.samlauth.default_settings import ADVANCED_SETTINGS
 from wcs.samlauth.default_settings import DEFAULT_IDP_SETTINGS
 from wcs.samlauth.default_settings import DEFAULT_SP_SETTINGS
+from wcs.samlauth.interfaces import ISAMLUserIdGetter
 from wcs.samlauth.interfaces import ISAMLUserPropertiesMutator
 from wcs.samlauth.utils import clean_for_json
 from ZODB.POSException import ConflictError
 from zope.component import getAdapters
+from zope.component import getMultiAdapter
 from zope.interface import Interface
 import json
 import logging
@@ -78,7 +80,7 @@ class SamlAuthPlugin(BasePlugin):
         self.title = title
 
     def remember_identity(self, auth):
-        user_id = auth.get_nameid()
+        user_id = self._get_user_id(auth)
         userinfo = auth.get_friendlyname_attributes()
         if not userinfo:
             userinfo = auth.get_attributes()
@@ -125,13 +127,19 @@ class SamlAuthPlugin(BasePlugin):
         if user and self.getProperty("create_api_session"):
             self._setup_jwt_session(user_id, user)
 
+    def _get_user_id(self, auth):
+        getter = getMultiAdapter((self, api.portal.get().REQUEST), ISAMLUserIdGetter)
+        return getter.get_user_id(auth)
+
     def _updateUserProperties(self, user, userinfo):
         """Update the given user properties from the set of credentials.
         This is utilised when first creating a user, and to update
         their information when logging in again later.
         """
         properties = {}
-        mutators = list(getAdapters((self, api.portal.get().REQUEST), ISAMLUserPropertiesMutator))
+        mutators = list(
+            getAdapters((self, api.portal.get().REQUEST), ISAMLUserPropertiesMutator)
+        )
         mutators.sort(key=lambda adapter: adapter[1]._order)
         for mutator in mutators:
             try:
