@@ -1,3 +1,4 @@
+from wcs.samlauth.interfaces import ISAMLUserIdGetter
 from wcs.samlauth.interfaces import ISAMLUserPropertiesMutator
 from wcs.samlauth.plugin import ISamlAuthPlugin
 from wcs.samlauth.utils import make_string
@@ -40,3 +41,24 @@ class DefaultUserPropertiesMutator:
                 make_string(userinfo["name"]), make_string(userinfo["surname"])
             )
         properties.update(user_properties)
+
+
+@implementer(ISAMLUserIdGetter)
+@adapter(ISamlAuthPlugin, Interface)
+class DefaultUserIdGetter:
+    """
+    Default implementation of user id getter.
+    """
+
+    def __init__(self, plugin, request):
+        self.plugin = plugin
+        self.request = request
+
+    def get_user_id(self, auth):
+        """
+        Compute the user id based on the provided authentication information. Default is
+        to retrieve the id passed by the IDP.
+
+        :param auth: OneLogin SAML2 auth response
+        """
+        return auth.get_nameid()
