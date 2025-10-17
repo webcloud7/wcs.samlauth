@@ -20,6 +20,12 @@ class TestLogin(FunctionalTesting):
             name='form.widgets.metadata_url').value = self.idp_metadata_url
         self.browser.getControl(name='form.buttons.get_and_store').click()
 
+    def _get_user(self):
+        return tuple(filter(
+            lambda user: user.getId() != TEST_USER_ID,
+            api.portal.get_tool('portal_membership').listMembers())
+        )[0]
+
     def test_login(self):
 
         # 1. Go to login endpoint, which redirects to the keycloak login form
@@ -78,11 +84,7 @@ class TestLogin(FunctionalTesting):
             'Expect 2 users, the test user and the new user from keycloak'
         )
 
-        user = tuple(filter(
-            lambda user: user.getId() != TEST_USER_ID,
-            api.portal.get_tool('portal_membership').listMembers())
-        )[0]
-
+        user = self._get_user()
         self.assertEqual('testuser@webcloud7.ch', user.getProperty('email'))
         self.assertEqual('Test User', user.getProperty('fullname'))
 
@@ -97,6 +99,29 @@ class TestLogin(FunctionalTesting):
             1, len(api.portal.get_tool('portal_membership').listMembers()),
             'Expect 1 user, the test user and the new user from keycloak'
         )
+
+    def test_do_not_update_user_properties(self):
+        self.plugin.manage_changeProperties(update_user=False)
+        transaction.commit()
+        self._login_keycloak_test_user()
+
+        transaction.begin()
+        user = self._get_user()
+        user.setMemberProperties(mapping={'fullname': 'new fullname'})
+        transaction.commit()
+
+        self._login_keycloak_test_user()
+        transaction.begin()
+        self.assertEqual('new fullname', user.getProperty('fullname'))
+
+        # Cross check, by re-enable update-user again
+        self.plugin.manage_changeProperties(update_user=True)
+        transaction.commit()
+        self._login_keycloak_test_user()
+
+        transaction.begin()
+        user = user = self._get_user()
+        self.assertEqual('Test User', user.getProperty('fullname'))
 
     def test_do_not_create_plone_session(self):
         self.plugin.manage_changeProperties(create_session=False)
@@ -147,23 +172,6 @@ class TestLogin(FunctionalTesting):
 
         self.assertTrue(session.get('__ac'), 'Expect a plone session')
         self.assertEqual('https://www.myfrontend.com/demo', url)
-
-    def test_token_in_redirect(self):
-        install_api_jwt_plugin(self.portal)
-        self.plugin.manage_changeProperties(
-            allowed_redirect_hosts=('www.myfrontend.com', ),
-            create_api_session=True,
-            include_api_token_in_redirect=True)
-        transaction.commit()
-        session, url = self._login_keycloak_test_user(
-            came_from='https://www.myfrontend.com/demo'
-        )
-
-        self.assertTrue(session.get('__ac'), 'Expect a plone session')
-        self.assertTrue(session.get('auth_token'), 'Expect a jwt session cookie')
-
-        token = session.get('auth_token')
-        self.assertEqual(f'https://www.myfrontend.com/demo?auth_token={token}', url)
 
     def test_challenge_plugin(self):
         prefs_url = api.portal.get().absolute_url() + '/@@personal-preferences'

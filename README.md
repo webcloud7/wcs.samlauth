@@ -64,6 +64,7 @@ Given the ID of the SAML plugin is "saml":
 - Implements almost everything from python3-saml, this includes SP signing of the AuthnRequest and metadata
 - Create a plone session and/or restapi token
 - Enable/Disable the creation of a plone user
+- Enable/Disable updating user properties (after creation)
 - Automatically updates user data (hardcoded, currently limited to email and fullname)
 - Enable/Disable the validation of authn requests (Uses temporarly a `__saml` cookie)
 - Prevent Redirect attacks, by validating the RelayState parameter and a and an "allowed" list of domains, where we can redirect to
