@@ -53,6 +53,7 @@ class SamlAuthPlugin(BasePlugin):
     create_api_session = False
     include_api_token_in_redirect = False
     create_user = True
+    update_user = True
     validate_authn_request = False
     allowed_redirect_hosts = ()
     settings_sp = json.dumps(json.loads(clean_for_json(DEFAULT_SP_SETTINGS)), indent=4)
@@ -65,6 +66,7 @@ class SamlAuthPlugin(BasePlugin):
         dict(id='create_api_session', label='Create API Session', type='boolean', mode='w'),
         dict(id='include_api_token_in_redirect', label='Include API token in redirect', type='boolean', mode='w'),
         dict(id='create_user', label='Create User', type='boolean', mode='w'),
+        dict(id='update_user', label='Update User', type='boolean', mode='w'),
         dict(id='validate_authn_request', label='Validate AuthN requests via cookie', type='boolean', mode='w'),
         dict(id='allowed_redirect_hosts', label='Allowed hosts to redirect to', type='lines', mode='w'),
         dict(id='settings_sp', label='SP (plone) Settings', type='text', mode='w'),
@@ -87,38 +89,39 @@ class SamlAuthPlugin(BasePlugin):
             return
 
         user = pas.getUserById(user_id)
-        if self.getProperty("create_user"):
-            if user is None:
-                userAdders = self.plugins.listPlugins(IUserAdderPlugin)
-                if not userAdders:
-                    raise NotImplementedError(
-                        "I wanted to make a new user, but"
-                        " there are no PAS plugins active"
-                        " that can make users."
-                    )
 
-                # Add the user to the first IUserAdderPlugin that works:
-                user = None
-                for _, curAdder in userAdders:
-                    if curAdder.doAddUser(user_id, self._generatePassword()):
-                        # Assign a dummy password. It'll never be used;.
-                        user = self._getPAS().getUser(user_id)
-                        try:
-                            membershipTool = api.portal.get_tool("portal_membership")
-                            if not membershipTool.getHomeFolder(user_id):
-                                membershipTool.createMemberArea(user_id)
-                        except (ConflictError, KeyboardInterrupt):
-                            raise
-                        except Exception:  # nosec B110
-                            # Silently ignored exception, but seems fine here.
-                            # Logging would likely generate too much noise,
-                            # depending on your setup.
-                            # https://bandit.readthedocs.io/en/1.7.4/plugins/b110_try_except_pass.html
-                            pass
-                        self._updateUserProperties(user, userinfo)
-                        break
-            else:
-                self._updateUserProperties(user, userinfo)
+        if user and self.getProperty("update_user"):
+            self._updateUserProperties(user, userinfo)
+
+        if user is None and self.getProperty("create_user"):
+            userAdders = self.plugins.listPlugins(IUserAdderPlugin)
+            if not userAdders:
+                raise NotImplementedError(
+                    "I wanted to make a new user, but"
+                    " there are no PAS plugins active"
+                    " that can make users."
+                )
+
+            # Add the user to the first IUserAdderPlugin that works:
+            user = None
+            for _, curAdder in userAdders:
+                if curAdder.doAddUser(user_id, self._generatePassword()):
+                    # Assign a dummy password. It'll never be used;.
+                    user = self._getPAS().getUser(user_id)
+                    try:
+                        membershipTool = api.portal.get_tool("portal_membership")
+                        if not membershipTool.getHomeFolder(user_id):
+                            membershipTool.createMemberArea(user_id)
+                    except (ConflictError, KeyboardInterrupt):
+                        raise
+                    except Exception:  # nosec B110
+                        # Silently ignored exception, but seems fine here.
+                        # Logging would likely generate too much noise,
+                        # depending on your setup.
+                        # https://bandit.readthedocs.io/en/1.7.4/plugins/b110_try_except_pass.html
+                        pass
+                    self._updateUserProperties(user, userinfo)
+                    break
 
         if user and self.getProperty("create_session"):
             self._setup_plone_session(user_id)
