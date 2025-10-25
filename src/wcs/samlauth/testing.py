@@ -226,13 +226,12 @@ class SAMLAuthLayer(PloneSandboxLayer):
     def setUpZope(self, app, configurationContext):
         super().setUpZope(app, configurationContext)
 
-        xmlconfig.string(
-            '<configure xmlns="http://namespaces.zope.org/zope">'
-            '  <include package="plone.autoinclude" file="meta.zcml" />'
-            '  <autoIncludePlugins target="plone" />'
-            '  <autoIncludePluginsOverrides target="plone" />'
-            '</configure>',
-            context=configurationContext)
+        import wcs.samlauth
+        xmlconfig.file(
+            'configure.zcml',
+            wcs.samlauth,
+            context=configurationContext
+        )
 
         installProduct(app, 'wcs.samlauth')
 

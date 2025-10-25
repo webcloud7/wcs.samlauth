@@ -1,6 +1,6 @@
 import os
 
-from setuptools import find_packages, setup
+from setuptools import find_namespace_packages, setup
 
 long_description = "\n\n".join(
     [
@@ -19,7 +19,7 @@ tests_require = [
 ]
 
 setup(
-    name="wcs.samlauth",
+    name="wcs-samlauth",
     version="1.2.1.dev0",
     description="SAML authentication for plone sites",
     long_description=long_description,
@@ -42,8 +42,8 @@ setup(
     author_email="m.leimgruber@webcloud7.ch",
     url="https://pypi.python.org/pypi/wcs.samlauth",
     license="GPL version 2",
-    packages=find_packages(exclude=["ez_setup"]),
-    namespace_packages=["wcs"],
+    package_dir={"": "src"},
+    packages=find_namespace_packages("src"),
     include_package_data=True,
     zip_safe=False,
     install_requires=[
