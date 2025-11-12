@@ -5,6 +5,7 @@ Changelog
 1.3.0 (unreleased)
 ------------------
 
+- Move to native namespaces [mathias.leimgruber]
 - BugFix: Fix updating user properties when user already exists. [mathias.leimgruber]
 - Feature: Updating user properties can now be disabled by setting the "update_user" flag to "False" in the plugin settings. [mathias.leimgruber]
 
