@@ -2,8 +2,8 @@ Changelog
 =========
 
 
-1.3.0 (unreleased)
-------------------
+1.3.0a1 (2025-11-12)
+--------------------
 
 - Move to native namespaces [mathias.leimgruber]
 - BugFix: Fix updating user properties when user already exists. [mathias.leimgruber]
