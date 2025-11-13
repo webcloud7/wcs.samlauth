@@ -1,7 +1,6 @@
-recursive-include wcs *
+recursive-include src/wcs *
 recursive-include docs *
 include *.md
-recursive-include *.zcml
 global-exclude *.pyc
 global-exclude *.mo
 global-exclude ._*

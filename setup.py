@@ -1,6 +1,6 @@
 import os
 
-from setuptools import find_namespace_packages, setup
+from setuptools import setup
 
 long_description = "\n\n".join(
     [
@@ -42,8 +42,6 @@ setup(
     author_email="m.leimgruber@webcloud7.ch",
     url="https://pypi.python.org/pypi/wcs.samlauth",
     license="GPL version 2",
-    package_dir={"": "src"},
-    packages=find_namespace_packages("src"),
     include_package_data=True,
     zip_safe=False,
     install_requires=[
