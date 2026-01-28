@@ -20,7 +20,7 @@ tests_require = [
 
 setup(
     name="wcs.samlauth",
-    version="1.3.0a3.dev0",
+    version="1.3.0b1",
     description="SAML authentication for plone sites",
     long_description=long_description,
     long_description_content_type="text/markdown",
