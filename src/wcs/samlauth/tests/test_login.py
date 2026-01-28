@@ -1,8 +1,10 @@
 from plone import api
 from plone.app.testing import TEST_USER_ID
 from plone.restapi.setuphandlers import install_pas_plugin as install_api_jwt_plugin
+from Products.PlonePAS.events import UserLoggedInEvent
 from wcs.samlauth.tests import FunctionalTesting
 from wcs.samlauth.views import SAML_AUTHN_REQUEST_COOKIE_NAME
+from zope.component import getGlobalSiteManager
 import requests
 import transaction
 
@@ -214,3 +216,19 @@ class TestLogin(FunctionalTesting):
 
         assert 'Location' in auth_redirect.headers, 'Expect a redirect'
         self.assertNotIn(SAML_AUTHN_REQUEST_COOKIE_NAME, auth_redirect.cookies)
+
+    def test_user_logged_in_event_is_fired(self):
+        events = []
+
+        def capture_event(event):
+            events.append(event)
+
+        gsm = getGlobalSiteManager()
+        gsm.registerHandler(capture_event, (UserLoggedInEvent,))
+        try:
+            self._login_keycloak_test_user()
+        finally:
+            gsm.unregisterHandler(capture_event, (UserLoggedInEvent,))
+
+        self.assertEqual(1, len(events), 'Expect exactly one UserLoggedInEvent')
+        self.assertEqual('testuser@webcloud7.ch', events[0].object.getProperty('email'))
