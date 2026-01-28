@@ -3,6 +3,7 @@ from AccessControl.SecurityInfo import ClassSecurityInfo
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 from plone import api
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
+from Products.PlonePAS.events import UserLoggedInEvent
 from Products.PluggableAuthService.interfaces.plugins import IAuthenticationPlugin
 from Products.PluggableAuthService.interfaces.plugins import IChallengePlugin
 from Products.PluggableAuthService.interfaces.plugins import IUserAdderPlugin
@@ -16,6 +17,7 @@ from wcs.samlauth.interfaces import ISAMLUserPropertiesMutator
 from wcs.samlauth.utils import clean_for_json
 from ZODB.POSException import ConflictError
 from zope.component import getAdapters
+from zope.event import notify
 from zope.interface import Interface
 import json
 import logging
@@ -127,6 +129,9 @@ class SamlAuthPlugin(BasePlugin):
             self._setup_plone_session(user_id)
         if user and self.getProperty("create_api_session"):
             self._setup_jwt_session(user_id, user)
+
+        if user:
+            notify(UserLoggedInEvent(user))
 
     def _updateUserProperties(self, user, userinfo):
         """Update the given user properties from the set of credentials.
