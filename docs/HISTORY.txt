@@ -2,8 +2,8 @@ Changelog
 =========
 
 
-1.3.0b2 (unreleased)
---------------------
+1.3.0 (2026-01-29)
+------------------
 
 - Update package metadata. [mathias.leimgruber]
 
