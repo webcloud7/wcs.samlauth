@@ -59,4 +59,5 @@
       /> 
 
     <adapter factory=".user_properties.DefaultUserPropertiesMutator" />
+    <adapter factory=".user_properties.DefaultUserIdGetter" />
 </configure>
