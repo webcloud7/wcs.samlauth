@@ -10,7 +10,6 @@ The package is tested with plone 6.x and python 3.11/3.12. It does not officiall
 
 Make it as easy as possible to configure plone as a SP (Service Provider), without having a in depth knowledge of SAML and how it works under the hood. This package uses the high level API of python3-saml, which makes it easy to configure and use.
 
-
 ## TL;DR
 
 1. Install wcs.samlauth plugin
@@ -20,8 +19,7 @@ Make it as easy as possible to configure plone as a SP (Service Provider), witho
 5. Go to http://localhost:8080/Plone/acl_users/saml/metadata and configure your IDP
 6. Use http://localhost:8080/Plone/acl_users/saml/sls to login via IDP
 
-
-## Architecure
+## Architecture
 
 The plugin is based on a similar architecture/concept as [pas.plugins.oidc](https://github.com/collective/pas.plugins.oidc/). It basically means that all endpoints are directly on the plugin.
 The plugin does not override plones login/logout views. This is up to you.
@@ -29,7 +27,7 @@ If you only have one saml plugin it's possible to enable the **Challenge** plugi
 
 This enables you to add multiple saml plugins as well.
 
-### Dependecies:
+### Dependencies:
 
 See [python3-saml](https://github.com/SAML-Toolkits/python3-saml)
 Make especially sure the following packages can be installed, since the have some system dependencies as well:
@@ -38,23 +36,22 @@ Make especially sure the following packages can be installed, since the have som
 - [lxml](https://pypi.org/project/lxml/)
 
 For example, on a recent Ubuntu, you should run:
+
 ```shell
 apt install pkg-config libxml2-dev libxmlsec1-dev libxmlsec1-openssl
 ```
 
 ## Endpoints
 
-
 Given the ID of the SAML plugin is "saml":
 
 - Expose SP metadata on http://localhost:8080/Plone/acl_users/saml/metadata
-    - the SP metadata is partially generated and partially static. entityId, assertionConsumerService and singleLogoutService are generated
+  - The SP metadata is partially generated and partially static. `entityId`, `assertionConsumerService`, and `singleLogoutService` are generated.
 - SAML Login endpoint is http://localhost:8080/Plone/acl_users/saml/sls
 - SAML ACS endpoint is http://localhost:8080/Plone/acl_users/saml/acs
 - SAML Logout endpoint is http://localhost:8080/Plone/acl_users/saml/slo
 - SAML SP initiated logout endpoint http://localhost:8080/Plone/acl_users/saml/logout
 - Fetch IDP metadata http://localhost:8080/Plone/acl_users/saml/idp_metadata
-
 
 ## Features
 
@@ -74,11 +71,10 @@ Given the ID of the SAML plugin is "saml":
 - Configure attribute mapping via ISAMLUserPropertiesMutator adapters.
 - Expose generated api token via redirect url (Potential security risk, only use it if you know what you are doing).
 
-
 ## Installation
 
-
 Add plugin to your buildout
+
 ```
 [buildout]
 
@@ -88,14 +84,13 @@ eggs =
     wcs.samlauth
 ```
 
-
 Add wcs.samlauth to plone docker image
+
 ```
 $ docker run -p 8080:8080 -e SITE="mysite" -e ADDONS="wcs.samlauth" plone
 ```
 
 From the ZMI go to `acl_users` and add the saml plugin.
-
 
 ## Development
 
@@ -121,6 +116,7 @@ $ make run
 With version 1.1.0 wcs.samlauth now supports the mapping of custom saml attributes to plone user properties.
 
 Example:
+
 ```
 from wcs.samlauth.interfaces import ISAMLUserPropertiesMutator
 from wcs.samlauth.plugin import ISamlAuthPlugin
@@ -146,6 +142,7 @@ class PhoneUserPropertiesMutator:
 ```
 
 ZCML:
+
 ```
 <adapter factory="PhoneUserPropertiesMutator"/>
 ```
@@ -156,14 +153,11 @@ Any other attributes need to be implemented via custom adapters.
 You can register multiple adapters and you can also override the values given
 by the default adapter. Just make sure `_order` attribut on the adapter is higher than 1.
 
-
-
 # Test
 
 You need a local docker installation to run tests.
 
 The package provides a docker test layer, which spins up keycloak and loads various configuration files into keycloak.
-
 
 ```
 $ make test
@@ -182,12 +176,11 @@ It inclues examples with SP signed autn requests and metadata.
 
 The examples below do not use this specific saml feature which is required by most IDP.
 
-## Manuall configuiration
+## Manual configuration
 
 You can configure everythin manully as well. Please see the [python3-saml documentation](https://github.com/SAML-Toolkits/python3-saml/blob/v1.15.0/README.md) for details
 
 The configuration needs to be applied directly on the property tab of the saml plugin.
-
 
 ## Configure with keycloak as IDP
 
@@ -201,60 +194,59 @@ For both create a new saml pas plugin via ZMI in acl_users
 
 3. With the data from http://localhost:8080/Plone/acl_users/saml/metadata create a new Client.
 
-    Client type is SAML.
+   Client type is SAML.
 
-    Important note here: The client ID is identical to the SAML `EntityID`
-    For example http://localhost:8080/keycloak/acl_users/saml/metadata
+   Important note here: The client ID is identical to the SAML `EntityID`
+   For example http://localhost:8080/keycloak/acl_users/saml/metadata
 
-    ![Create keycloak client](./docs/images/keycloak_create_client.png?raw=true "Create keycloak client")
+   ![Create keycloak client](./docs/images/keycloak_create_client.png?raw=true "Create keycloak client")
 
-    Click "next"
+   Click "next"
 
 4. Configure Home URL and Valid redirect URLs
 
-    ![Configure keycloak](./docs/images/keycloak_config.png?raw=true "Configure keycloak")
+   ![Configure keycloak](./docs/images/keycloak_config.png?raw=true "Configure keycloak")
 
-    Click "Save"
+   Click "Save"
 
-5. Go to "Keys" tab and disable "Client signature required" 
+5. Go to "Keys" tab and disable "Client signature required"
 
-    ![Disable signing](./docs/images/keycloak_disable.png?raw=true "Disable signing")
+   ![Disable signing](./docs/images/keycloak_disable.png?raw=true "Disable signing")
 
 6. Configure attribute bindings
 
-    Unter "Client scopes" click on URL which ends with /metadata-dedicated
+   Unter "Client scopes" click on URL which ends with /metadata-dedicated
 
-    ![Disable signing](./docs/images/keycloak_scope.png?raw=true "Disable signing")
+   ![Disable signing](./docs/images/keycloak_scope.png?raw=true "Disable signing")
 
-    Click on "Add predefined mapper"
+   Click on "Add predefined mapper"
 
-    Chose the following mappers
-    ![Disable signing](./docs/images/keycloak_attrs.png?raw=true "Disable signing")
+   Chose the following mappers
+   ![Disable signing](./docs/images/keycloak_attrs.png?raw=true "Disable signing")
 
-    Click "Add"
+   Click "Add"
 
 7. Go to the Advance tab and configure the logout service redirect binding (python3-saml only supports the redirect binding here)
 
-    ![Configure keycloak advanced](./docs/images/keycloak_advanced.png?raw=true "Configure keycloak advanced")
+   ![Configure keycloak advanced](./docs/images/keycloak_advanced.png?raw=true "Configure keycloak advanced")
 
-8. Copy the metadataa saml config URL
+8. Copy the metadata SAML config URL
 
-    ![copy url](./docs/images/keycloak_url.png?raw=true "copy url")
+   ![copy url](./docs/images/keycloak_url.png?raw=true "copy url")
 
 ### SP part on your Plone site
 
 1. Go to URL: http://localhost:8080/Plone/acl_users/saml/idp_metadata
 
-    Enter the Url and Click on "Get and store metadata"
+   Enter the Url and Click on "Get and store metadata"
 
-    ![copy url](./docs/images/plone_url.png?raw=true "copy url")    
+   ![copy url](./docs/images/plone_url.png?raw=true "copy url")
 
-    Hints: Keycloak has `authnRequestsSigned: true` hardcoded. 
+   Hint: Keycloak has `authnRequestsSigned: true` hardcoded.
 
 **THATS IT!! Go To http://localhost:8080/Plone/acl_users/saml/sls to login via azure**
 
 If this is the only saml plugin on your site and want all users to login via saml, then you can enable the Challenge Plugin and change the login and logout actions on your plone site to use the saml endpoints.
-
 
 ## Configure with Azure as IDP
 
@@ -263,56 +255,98 @@ This is a tutorial how to configure an azure cloud enterprise app as IDP for thi
 ### IDP part on azure cloud
 
 1. Go to your azure AD and create a new enterprise app.
-    
-    ![Create azure enterprise app](./docs/images/azure_create_app.png?raw=true "Create azure enterprise app")
+
+   ![Create azure enterprise app](./docs/images/azure_create_app.png?raw=true "Create azure enterprise app")
 
 2. Go to the "Single Sign on" section.
 
-    ![SSO section](./docs/images/azure_sso.png?raw=true "SSO section")
+   ![SSO section](./docs/images/azure_sso.png?raw=true "SSO section")
 
 3. Add SAML authentification to app.
 
-    ![Add SAML](./docs/images/azure_saml.png?raw=true "Add SAML")
+   ![Add SAML](./docs/images/azure_saml.png?raw=true "Add SAML")
 
 4. Gather the metadata from the SAML plugin.
 
-    URL: http://localhost:8080/Plone/acl_users/saml/metadata
+   URL: http://localhost:8080/Plone/acl_users/saml/metadata
 
-    ![Get metadata](./docs/images/plone_get_metadata.png?raw=true "Get metadata")
+   ![Get metadata](./docs/images/plone_get_metadata.png?raw=true "Get metadata")
 
-4. Manually edit "Basic SAML Configuration" (Info's can be taken from the SP metadata xml)
+5. Manually edit "Basic SAML Configuration" (Info's can be taken from the SP metadata xml)
 
-    Add EntityID and ACS. Optionally also add the Logout URL. Azure wants https there, so depending on your setup
-    just leave it blank.
+   Add EntityID and ACS. Optionally also add the Logout URL. Azure wants https there, so depending on your setup
+   just leave it blank.
 
-    ![Edit basic saml](./docs/images/azure_edit_basic.png?raw=true "Edit basic saml")
+   ![Edit basic saml](./docs/images/azure_edit_basic.png?raw=true "Edit basic saml")
 
-5. Edit "Attributes & Claims"
-    
-    The plugin only supports the email address, given name and surename
-    You can configure more attributes, but they will be ignored.
+6. Edit "Attributes & Claims"
 
-    Important: The clame names need to be givenName, surename and email.
-    Also remove the namespace and leave empty.
-    
-    ![Edit attrs](./docs/images/azure_attrs.png?raw=true "Edit attrs")
+   The plugin only supports the email address, given name and surename
+   You can configure more attributes, but they will be ignored.
 
-6. Download Federation metadata XML
+   Important: The clame names need to be givenName, surename and email.
+   Also remove the namespace and leave empty.
 
-    ![Download metadata](./docs/images/azure_download.png?raw=true "Download metadata")
+   ![Edit attrs](./docs/images/azure_attrs.png?raw=true "Edit attrs")
+
+7. Download Federation metadata XML
+
+   ![Download metadata](./docs/images/azure_download.png?raw=true "Download metadata")
 
 ### SP part on your Plone site
 
 1. Go to URL: http://localhost:8080/Plone/acl_users/saml/idp_metadata
 
-    Upload and store configuration from IDP (azure)
+   Upload and store configuration from IDP (azure)
 
-    ![Upload xml](./docs/images/plone_upload.png?raw=true "Upload xml")
+   ![Upload xml](./docs/images/plone_upload.png?raw=true "Upload xml")
 
 2. The upload form also shows you what information has been gathered from the Metadata XML and what will be stored in your saml plugin
 
-    ![Info xml](./docs/images/plone_info.png?raw=true "Info xml")
+   ![Info xml](./docs/images/plone_info.png?raw=true "Info xml")
 
 **THATS IT!! Go To http://localhost:8080/Plone/acl_users/saml/sls to login via azure**
 
 If this is the only saml plugin on your site and want all users to login via saml, then you can enable the Challenge Plugin and change the login and logout actions on your plone site to use the saml endpoints.
+
+## Configure with Google Workspace as IDP
+
+This is a tutorial on how to configure a Google Workspace Enterprise App as an IdP for this plugin.
+
+### IDP part on Google Workspace
+
+1. Go to your Google Workspace admin console.
+
+   ![Create Google SAML app](./docs/images/google_create_saml.png?raw=true "Create Google SAML app")
+
+2. Download the IdP metadata.
+
+   ![Download IDP metadata](./docs/images/google_download_idp_metadata.png?raw=true "Download IDP metadata")
+
+### SP part on your Plone site
+
+1. Go to URL: http://localhost:8080/Plone/acl_users/saml/idp_metadata
+
+   Upload and store the IdP metadata XML.
+
+   ![Upload xml](./docs/images/plone_upload.png?raw=true "Upload xml")
+
+2. The upload form also shows you what information has been gathered from the Metadata XML and what will be stored in your SAML plugin.
+
+   ![Info xml](./docs/images/plone_info.png?raw=true "Info xml")
+
+### Back to Google Workspace
+
+1. Fill in the SP details.
+   The ACS URL is the Assertion Consumer Service URL (e.g., http://localhost:8080/Plone/acl_users/saml/acs), and the Entity ID is the Entity ID from the SP metadata XML (e.g., http://localhost:8080/Plone/acl_users/saml/metadata).
+   Double-check this in the SP Metadata XML (e.g., http://localhost:8080/Plone/acl_users/saml/metadata).
+
+   ![Fill in the SP details](./docs/images/google_sp_details.png?raw=true "Fill in the SP details")
+
+2. Complete with attribute mapping
+
+   ![Attribute mapping](./docs/images/google_attribute_mapping.png?raw=true "Attribute mapping")
+
+**THAT'S IT!! Go to http://localhost:8080/Plone/acl_users/saml/sls to log in via Google Workspace.**
+
+If this is the only SAML plugin on your site and you want all users to log in via SAML, you can enable the Challenge Plugin and change the login and logout actions on your Plone site to use the SAML endpoints.
