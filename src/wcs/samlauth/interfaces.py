@@ -15,3 +15,16 @@ class ISAMLUserPropertiesMutator(Interface):
         :param properties: Dictionary containing current user properties
         :return: None. Updates properties by reference
         """
+
+
+class ISAMLUserIdGetter(Interface):
+    """
+    Interface for user id in SAML authentication.
+    """
+
+    def get_user_id(auth):
+        """
+        Compute the user id based on the provided authentication information.
+
+        :param auth: OneLogin SAML2 auth response
+        """
