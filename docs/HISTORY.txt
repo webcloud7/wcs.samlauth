@@ -24,6 +24,10 @@ Changelog
 - Add ``userid_attribute`` property: use a SAML attribute (e.g. a fiscal code)
   as Plone user id instead of the NameID. [mamico]
 
+- Fix the generated SP metadata: set ``index="0"`` on the
+  AssertionConsumerService and add an ``encryption`` KeyDescriptor with the
+  supported ``EncryptionMethod`` elements. [mamico]
+
 
 1.3.0 (2026-01-29)
 ------------------
