@@ -1,5 +1,13 @@
 from AccessControl.class_init import InitializeClass
 from AccessControl.SecurityInfo import ClassSecurityInfo
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 from plone import api
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
@@ -57,11 +65,16 @@ class SamlAuthPlugin(BasePlugin):
     create_user = True
     update_user = True
     validate_authn_request = False
+    userid_attribute = ''
     allowed_redirect_hosts = ()
     settings_sp = json.dumps(json.loads(clean_for_json(DEFAULT_SP_SETTINGS)), indent=4)
     settings_idp = json.dumps(json.loads(clean_for_json(DEFAULT_IDP_SETTINGS)), indent=4)
     advanced = json.dumps(json.loads(clean_for_json(ADVANCED_SETTINGS)), indent=4)
     adfs_as_idp = False
+    metadata_url = ''
+    metadata_auto_refresh = False
+    metadata_refresh_interval = 86400
+    metadata_last_refreshed = ''
 
     _properties = (
         dict(id='create_session', label='Create Plone Session', type='boolean', mode='w'),
@@ -70,11 +83,16 @@ class SamlAuthPlugin(BasePlugin):
         dict(id='create_user', label='Create User', type='boolean', mode='w'),
         dict(id='update_user', label='Update User', type='boolean', mode='w'),
         dict(id='validate_authn_request', label='Validate AuthN requests via cookie', type='boolean', mode='w'),
+        dict(id='userid_attribute', label='SAML attribute used as user id (empty: NameID)', type='string', mode='w'),
         dict(id='allowed_redirect_hosts', label='Allowed hosts to redirect to', type='lines', mode='w'),
         dict(id='settings_sp', label='SP (plone) Settings', type='text', mode='w'),
         dict(id='settings_idp', label='IDP Settings', type='text', mode='w'),
         dict(id='advanced', label='Advanced', type='text', mode='w'),
         dict(id='adfs_as_idp', label='Check this box if ADFS is the IDP', type='boolean', mode='w'),
+        dict(id='metadata_url', label='IDP Metadata URL for auto-refresh', type='string', mode='w'),
+        dict(id='metadata_auto_refresh', label='Enable automatic metadata refresh', type='boolean', mode='w'),
+        dict(id='metadata_refresh_interval', label='Metadata refresh interval (seconds)', type='int', mode='w'),
+        dict(id='metadata_last_refreshed', label='Last metadata refresh timestamp (ISO)', type='string', mode='w'),
     )
 
     def __init__(self, id_, title=None):
@@ -82,10 +100,10 @@ class SamlAuthPlugin(BasePlugin):
         self.title = title
 
     def remember_identity(self, auth):
-        user_id = auth.get_nameid()
-        userinfo = auth.get_friendlyname_attributes()
-        if not userinfo:
-            userinfo = auth.get_attributes()
+        userinfo = self._get_userinfo(auth)
+        user_id = self._get_user_id(auth, userinfo)
+        if not user_id:
+            return
         pas = self._getPAS()
         if pas is None:
             return
@@ -132,6 +150,31 @@ class SamlAuthPlugin(BasePlugin):
 
         if user:
             notify(UserLoggedInEvent(user))
+
+    def _get_userinfo(self, auth):
+        """Return the SAML attributes keyed by Name and by FriendlyName.
+
+        Some IdPs (e.g. Lepida FedERa) set a FriendlyName only on a few
+        attributes, so using only one of the two sets loses attributes.
+        On key conflicts the FriendlyName wins.
+        """
+        userinfo = dict(auth.get_attributes())
+        userinfo.update(auth.get_friendlyname_attributes())
+        return userinfo
+
+    def _get_user_id(self, auth, userinfo):
+        """Return the NameID, or the value of the configured user id attribute."""
+        attribute = self.getProperty('userid_attribute', '').strip()
+        if not attribute:
+            return auth.get_nameid()
+
+        values = userinfo.get(attribute) or []
+        user_id = values[0].strip() if values else ''
+        if not user_id:
+            logger.error(
+                'SAML attribute %r configured as user id is missing or empty. '
+                'Available attributes: %s', attribute, sorted(userinfo))
+        return user_id
 
     def _updateUserProperties(self, user, userinfo):
         """Update the given user properties from the set of credentials.
@@ -216,6 +259,78 @@ class SamlAuthPlugin(BasePlugin):
                 'settings_sp': json.dumps({'sp': settings_sp}, indent=4),
             }
         )
+
+    def generate_sp_certificate(self, key_size=2048, days_valid=3650):
+        """Generate a self-signed SP certificate and private key and store them
+        in settings_sp. Any existing certificate and key will be replaced.
+        """
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=key_size,
+        )
+        common_name = self.absolute_url()
+        subject = issuer = x509.Name([
+            x509.NameAttribute(NameOID.COMMON_NAME, common_name),
+        ])
+        now = datetime.now(timezone.utc)
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(subject)
+            .issuer_name(issuer)
+            .public_key(private_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now)
+            .not_valid_after(now + timedelta(days=days_valid))
+            .sign(private_key, hashes.SHA256())
+        )
+        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode('utf-8')
+        key_pem = private_key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ).decode('utf-8')
+
+        # python3-saml expects base64 content without PEM headers or newlines
+        cert_b64 = ''.join(cert_pem.strip().splitlines()[1:-1])
+        key_b64 = ''.join(key_pem.strip().splitlines()[1:-1])
+
+        sp_settings = json.loads(self.getProperty('settings_sp'))
+        sp_settings['sp']['x509cert'] = cert_b64
+        sp_settings['sp']['privateKey'] = key_b64
+        self.manage_changeProperties(settings_sp=json.dumps(sp_settings, indent=4))
+        logger.info('Generated new SP certificate (CN=%s, valid %d days)', common_name, days_valid)
+
+    def _maybe_refresh_metadata(self):
+        if not self.getProperty('metadata_auto_refresh'):
+            return
+        url = self.getProperty('metadata_url', '')
+        if not url:
+            return
+        last_refreshed = self.getProperty('metadata_last_refreshed', '')
+        interval = self.getProperty('metadata_refresh_interval', 86400)
+        if last_refreshed:
+            last_dt = datetime.fromisoformat(last_refreshed)
+            elapsed = (datetime.now(timezone.utc) - last_dt).total_seconds()
+            if elapsed < interval:
+                return
+        self.refresh_metadata()
+
+    def refresh_metadata(self):
+        url = self.getProperty('metadata_url', '')
+        if not url:
+            return False, 'No metadata URL configured'
+        now = datetime.now(timezone.utc).isoformat()
+        try:
+            new_data = self._fetch_metadata(url)
+            updated_data = self._update_metadata(new_data)
+            self.store(updated_data)
+            logger.info(f'IDP metadata refreshed from {url}')
+            return True, now
+        except Exception as e:
+            logger.warning(f'Failed to refresh IDP metadata from {url}: {e}')
+            return False, str(e)
+        finally:
+            self.manage_changeProperties(metadata_last_refreshed=now)
 
     def challenge(self, request, response):
         """Go to the login view of the PAS plugin

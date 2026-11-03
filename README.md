@@ -52,11 +52,15 @@ Given the ID of the SAML plugin is "saml":
 - SAML Logout endpoint is http://localhost:8080/Plone/acl_users/saml/slo
 - SAML SP initiated logout endpoint http://localhost:8080/Plone/acl_users/saml/logout
 - Fetch IDP metadata http://localhost:8080/Plone/acl_users/saml/idp_metadata
+- Refresh IDP metadata now (JSON response, Manager only) http://localhost:8080/Plone/acl_users/saml/refresh_idp_metadata
+- Generate a self-signed SP certificate (Manager only) http://localhost:8080/Plone/acl_users/saml/generate_sp_certificate
 
 ## Features
 
 - Fetch and store IDP metadata via IDP metadata endpoint
 - Upload and store IDP metadata via file upload
+- Automatic periodic refresh of the IDP metadata from its URL (see [IDP metadata auto-refresh](#idp-metadata-auto-refresh))
+- Generate a self-signed SP certificate and private key from the UI
 - Multiple saml plugins at the same time
 - Implements almost everything from python3-saml, this includes SP signing of the AuthnRequest and metadata
 - Create a plone session and/or restapi token
@@ -149,6 +153,18 @@ ZCML:
 
 A default adapter, which supports mapping email and fullname is registered by the plugin.
 Any other attributes need to be implemented via custom adapters.
+
+`userinfo` contains all SAML attributes keyed by `Name`.
+Attributes with a `FriendlyName` are also keyed by their `FriendlyName`.
+
+## User id
+
+By default the Plone user id is the SAML `NameID`.
+Set the `userid_attribute` property of the plugin to use the value of a SAML attribute instead,
+for example `CodiceFiscale` with Lepida FedERa.
+The attribute is looked up by `Name` or `FriendlyName`.
+If the attribute is missing in the response, the user is not logged in and an error is logged.
+The NameID is never used as fallback, to avoid creating a second user for the same person.
 
 You can register multiple adapters and you can also override the values given
 by the default adapter. Just make sure `_order` attribut on the adapter is higher than 1.
@@ -350,3 +366,111 @@ This is a tutorial on how to configure a Google Workspace Enterprise App as an I
 **THAT'S IT!! Go to http://localhost:8080/Plone/acl_users/saml/sls to log in via Google Workspace.**
 
 If this is the only SAML plugin on your site and you want all users to log in via SAML, you can enable the Challenge Plugin and change the login and logout actions on your Plone site to use the SAML endpoints.
+
+## IDP metadata auto-refresh
+
+IDPs rotate their signing certificates. To avoid manual updates, the plugin can re-fetch the IDP metadata from its URL and update the stored IDP settings.
+
+### Configuration
+
+1. Go to http://localhost:8080/Plone/acl_users/saml/idp_metadata, enter the metadata URL and click "Get and store metadata". The URL is saved in the `metadata_url` property.
+2. In the ZMI, open the SAML plugin, **Properties** tab, and set:
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `metadata_auto_refresh` | `False` | Enable the automatic refresh. |
+| `metadata_refresh_interval` | `86400` | Minimum seconds between two refreshes. |
+| `metadata_url` | empty | IDP metadata URL. Without it nothing is refreshed. |
+| `metadata_last_refreshed` | empty | ISO timestamp of the last attempt. Set by the plugin. |
+
+### How it works
+
+- There is no scheduler. On every request to a SAML view (login, ACS, logout, metadata) the plugin checks if `metadata_refresh_interval` seconds have passed since `metadata_last_refreshed`. If so, it fetches the metadata and stores it.
+- The existing IDP settings are merged with the new data, they are not replaced.
+- If the fetch fails, a warning is logged and the old settings stay in place. `metadata_last_refreshed` is updated anyway, so the next attempt happens after one interval.
+- While auto-refresh is enabled, the manual "Get and store metadata" button and the file upload are disabled. Only the URL can be changed. Disable auto-refresh to update the metadata manually.
+- The `idp_metadata` page shows the URL, the interval and the last refresh time.
+
+### Refresh now
+
+Manager users can force a refresh with the "Refresh now" button on the `idp_metadata` page, or with:
+
+```
+http://localhost:8080/Plone/acl_users/saml/refresh_idp_metadata
+```
+
+The response is JSON: `{"status": "ok", "refreshed_at": "...", "url": "..."}` on success, or `{"status": "error", "message": "..."}` with HTTP 400 (no URL configured) or 500 (fetch failed).
+
+## Signed AuthnRequests
+
+Some IDPs require the SP to sign its AuthnRequests. This is declared in the IDP metadata as `WantAuthnRequestsSigned="true"`. Examples include Federa (Lepida) and many national/federated identity providers.
+
+**Important:** the plugin intentionally does **not** apply this setting automatically when fetching IDP metadata, to avoid silently breaking authentication. It must be configured manually.
+
+### 1. Generate an SP certificate and private key
+
+The simplest way is the "Generate SP certificate" button on the `idp_metadata` page. It creates a self-signed certificate (RSA 2048, 10 years, CN = plugin URL) and stores `x509cert` and `privateKey` in `settings_sp`. Any existing certificate is replaced, so register the new SP metadata with the IDP afterwards. Then continue with step 3.
+
+Alternatively, generate one manually:
+
+```shell
+openssl req -x509 -newkey rsa:2048 -keyout sp.key -out sp.crt -days 3650 -nodes \
+    -subj "/CN=my-plone-sp"
+```
+
+Extract the certificate and key content without headers or newlines:
+
+```shell
+# certificate (strip header/footer and newlines)
+grep -v "^-----" sp.crt | tr -d '\n'
+
+# private key (strip header/footer and newlines)
+grep -v "^-----" sp.key | tr -d '\n'
+```
+
+### 2. Add the certificate and key to the SP settings
+
+In the ZMI, open the SAML plugin and go to the **Properties** tab. Edit the `settings_sp` field and set the `x509cert` and `privateKey` values:
+
+```json
+{
+    "sp": {
+        "...": "...",
+        "x509cert": "<paste certificate content here, single line, no headers>",
+        "privateKey": "<paste private key content here, single line, no headers>"
+    }
+}
+```
+
+### 3. Enable AuthnRequest signing in the advanced settings
+
+In the same Properties tab, edit the `advanced` field and set `authnRequestsSigned` to `true` in the `security` section:
+
+```json
+{
+    "security": {
+        "authnRequestsSigned": true,
+        "...": "..."
+    }
+}
+```
+
+The default signature algorithm is `rsa-sha256` and digest algorithm is `sha256`, which is acceptable for most IDPs. If your IDP requires different algorithms, adjust `signatureAlgorithm` and `digestAlgorithm` accordingly.
+
+### 4. Register the SP metadata with the IDP
+
+The IDP needs the SP's public certificate to verify the signature. After completing steps 2 and 3, fetch the updated SP metadata from:
+
+```
+http://localhost:8080/Plone/acl_users/saml/metadata
+```
+
+Register this metadata (or at least the certificate) with your IDP. The SP metadata will include `AuthnRequestsSigned="true"` and expose the public certificate in the `KeyDescriptor` element.
+
+### Verification
+
+After configuration, trigger a login via `http://localhost:8080/Plone/acl_users/saml/sls`. Check the Plone logs for any signature errors. If the IDP rejects the request, verify that:
+
+- The certificate registered with the IDP matches the one in `x509cert`
+- The `privateKey` corresponds to the `x509cert`
+- The signature algorithm is accepted by the IDP

@@ -76,12 +76,23 @@ class LoadIdPMetadataForm(form.Form):
 
     @button.buttonAndHandler(_(u'label_get_and_metadata', default=u'Get and store metadata'), name='get_and_store')
     def get_and_store(self, action):
+        if self.context.getProperty('metadata_auto_refresh'):
+            IStatusMessage(self.request).addStatusMessage(
+                _(
+                    'error_auto_refresh_enabled',
+                    default=u'Auto-refresh is enabled. Disable it before manually updating metadata.',
+                ),
+                type='warning',
+            )
+            return
+
         data, errors = self.extractData()
         if errors:
             return
 
         if data['metadata_url']:
             self.idp_data = self._fetch_metadata(data['metadata_url'])
+            self.context.manage_changeProperties(metadata_url=data['metadata_url'])
             msg = _(
                 'text_get_and_store',
                 default=u'IDP/SP Data has been fetched and stored in plugin settings.'
@@ -97,6 +108,10 @@ class LoadIdPMetadataForm(form.Form):
         self.context.store(updated_data)
 
         IStatusMessage(self.request).addStatusMessage(msg, type='info')
+
+    def has_sp_certificate(self):
+        sp_settings = json.loads(self.context.getProperty('settings_sp'))
+        return bool(sp_settings.get('sp', {}).get('x509cert', ''))
 
     def formatted_idp_metadata(self):
         if self.idp_data:

@@ -11,8 +11,24 @@
             <metal:form use-macro="context/@@ploneform-macros/titlelessform">
                 <metal:slot fill-slot="fields">
                     <div tal:content="structure view/widgets/metadata_url/@@ploneform-render-widget" />
-                    <div tal:content="structure view/widgets/metadata_file/@@ploneform-render-widget" />
-                    <metal:block use-macro="context/@@ploneform-macros/actions"/>
+                    <div tal:condition="not: context/metadata_auto_refresh"
+                         tal:content="structure view/widgets/metadata_file/@@ploneform-render-widget" />
+
+                    <div class="formControls">
+                        <input class="submit-widget button-field btn btn-default"
+                               type="submit"
+                               name="form.buttons.get"
+                               value="Get Metadata" />
+                        <tal:block tal:condition="not: context/metadata_auto_refresh">
+                            <input class="submit-widget button-field btn btn-primary"
+                                   type="submit"
+                                   name="form.buttons.get_and_store"
+                                   value="Get and store metadata" />
+                        </tal:block>
+                        <span class="discreet" tal:condition="context/metadata_auto_refresh">
+                            Auto-refresh is enabled — only the URL can be changed. Disable auto-refresh to update metadata manually.
+                        </span>
+                    </div>
 
                     <div class="idp-data" tal:condition="view/idp_data">
                         <pre><code tal:content="structure view/formatted_idp_metadata" /></pre>
@@ -20,5 +36,50 @@
                 </metal:slot>
                 <metal:slot fill-slot="actions" />
             </metal:form>
+        </div>
+
+        <div class="row" style="margin-top: 2em; border-top: 1px solid #ddd; padding-top: 1em;">
+            <h2>SP Certificate</h2>
+            <p tal:condition="view/has_sp_certificate" class="discreet">
+                A certificate is already configured.
+                Generating a new one will replace it — remember to re-register the SP metadata with your IDP.
+            </p>
+            <p tal:condition="not: view/has_sp_certificate" class="discreet">
+                No SP certificate configured.
+                A certificate is required to sign AuthnRequests (needed by some IDPs).
+            </p>
+            <p>
+                <a class="btn btn-default"
+                   tal:attributes="href string:${context/absolute_url}/@@generate_sp_certificate">
+                    Generate SP certificate
+                </a>
+            </p>
+        </div>
+
+        <div class="row" style="margin-top: 2em; border-top: 1px solid #ddd; padding-top: 1em;">
+            <h2>Auto-refresh</h2>
+            <dl class="dl-horizontal">
+                <dt>Metadata URL</dt>
+                <dd tal:content="python: context.getProperty('metadata_url') or '—'" />
+
+                <dt>Auto-refresh</dt>
+                <dd tal:condition="context/metadata_auto_refresh">
+                    Enabled — interval: <span tal:content="context/metadata_refresh_interval" /> seconds
+                </dd>
+                <dd tal:condition="not: context/metadata_auto_refresh">Disabled</dd>
+
+                <dt>Last refresh</dt>
+                <dd tal:content="python: context.getProperty('metadata_last_refreshed') or 'never'" />
+            </dl>
+
+            <p tal:condition="context/metadata_url">
+                <a class="btn btn-default"
+                   tal:attributes="href string:${context/absolute_url}/@@refresh_idp_metadata">
+                    Refresh now
+                </a>
+            </p>
+            <p class="discreet">
+                Auto-refresh and interval can be configured via the plugin properties (ZMI).
+            </p>
         </div>
 </html>

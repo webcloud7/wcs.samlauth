@@ -14,7 +14,7 @@ import time
 import requests
 
 
-MAX_CONNECTION_RETRIES = 20
+MAX_CONNECTION_RETRIES = 120
 LOGGER = logging.getLogger('wcs.samlauth')
 handler = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter('\n%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -63,7 +63,7 @@ class BaseDockerServiceLayer(Layer):
             capture_output=True,
             text=True)
 
-        if result.stderr:
+        if result.returncode != 0:
             raise RuntimeError(
                 f'Command ended with an error: {result.stderr}'
             )

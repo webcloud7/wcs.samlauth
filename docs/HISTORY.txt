@@ -5,7 +5,28 @@ Changelog
 1.3.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Add automatic refresh of the IDP metadata from its URL, with the
+  ``metadata_auto_refresh``, ``metadata_refresh_interval``, ``metadata_url``
+  and ``metadata_last_refreshed`` properties and a ``refresh_idp_metadata``
+  view. [mamico]
+
+- Add a button to generate a self-signed SP certificate and private key.
+  [mamico]
+
+- Accept SAML responses with assertions nested in the ``saml:Advice`` element
+  of the signed top-level assertion (e.g. Lepida FedERa). python3-saml rejected
+  them with "SAML Response must contain 1 assertion". [mamico]
+
+- Pass all SAML attributes to the user properties mutators, keyed by Name and
+  by FriendlyName. Before, if any attribute had a FriendlyName, attributes
+  without one were dropped. [mamico]
+
+- Add ``userid_attribute`` property: use a SAML attribute (e.g. a fiscal code)
+  as Plone user id instead of the NameID. [mamico]
+
+- Fix the generated SP metadata: set ``index="0"`` on the
+  AssertionConsumerService and add an ``encryption`` KeyDescriptor with the
+  supported ``EncryptionMethod`` elements. [mamico]
 
 
 1.3.0 (2026-01-29)

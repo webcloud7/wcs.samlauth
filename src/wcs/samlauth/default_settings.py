@@ -11,7 +11,8 @@ DEFAULT_SP_SETTINGS = """
             // SAML protocol binding to be used when returning the <Response>
             // message. SAML Toolkit supports this endpoint for the
             // HTTP-POST binding only.
-            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST",
+            "index": 0
         },
         // Specifies info about where and how the <Logout Request/Response> message MUST be sent.
         "singleLogoutService": {

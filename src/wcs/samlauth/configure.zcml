@@ -56,7 +56,21 @@
       name="idp_metadata"
       class=".forms.LoadIdPMetadataView"
       permission="cmf.ManagePortal"
-      /> 
+      />
+
+    <browser:page
+      for="wcs.samlauth.plugin.ISamlAuthPlugin"
+      name="refresh_idp_metadata"
+      class=".views.RefreshIdPMetadataView"
+      permission="cmf.ManagePortal"
+      />
+
+    <browser:page
+      for="wcs.samlauth.plugin.ISamlAuthPlugin"
+      name="generate_sp_certificate"
+      class=".views.GenerateSpCertificateView"
+      permission="cmf.ManagePortal"
+      />
 
     <adapter factory=".user_properties.DefaultUserPropertiesMutator" />
 </configure>

@@ -1,12 +1,14 @@
-from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.errors import OneLogin_Saml2_Error
 from plone import api
 from plone.protect.interfaces import IDisableCSRFProtection
 from Products.Five.browser import BrowserView
+from Products.statusmessages.interfaces import IStatusMessage
 from urllib.parse import quote
 from urllib.parse import urlparse
+from wcs.samlauth.saml import SamlAuth
 from zExceptions import BadRequest
 from zope.interface import alsoProvides
+import json
 import logging
 
 
@@ -19,6 +21,7 @@ class BaseSamlView(BrowserView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.saml_request = self._prepare_request()
+        self.context._maybe_refresh_metadata()
         self.settings = self.context.load_settings()
         self._update_settings()
 
@@ -49,7 +52,7 @@ class BaseSamlView(BrowserView):
 class LoginView(BaseSamlView):
     def __call__(self):
         try:
-            auth = OneLogin_Saml2_Auth(self.saml_request, self.settings)
+            auth = SamlAuth(self.saml_request, self.settings)
         except OneLogin_Saml2_Error as error:
             LOGGER.error(str(error))
             self.request.response.setHeader('X-Theme-Disabled', '1')
@@ -75,7 +78,7 @@ class LoginView(BaseSamlView):
 class CallbackView(BaseSamlView):
     def __call__(self):
         alsoProvides(self.request, IDisableCSRFProtection)
-        auth = OneLogin_Saml2_Auth(self.saml_request, self.settings)
+        auth = SamlAuth(self.saml_request, self.settings)
         request_id = None
 
         if SAML_AUTHN_REQUEST_COOKIE_NAME in self.request:
@@ -117,7 +120,7 @@ class CallbackView(BaseSamlView):
 
 class IdpLogoutView(BaseSamlView):
     def __call__(self):
-        auth = OneLogin_Saml2_Auth(self.saml_request, self.settings)
+        auth = SamlAuth(self.saml_request, self.settings)
 
         def _logout():
             mt = api.portal.get_tool('portal_membership')
@@ -130,20 +133,75 @@ class IdpLogoutView(BaseSamlView):
 
 class LogoutView(BaseSamlView):
     def __call__(self):
-        auth = OneLogin_Saml2_Auth(self.saml_request, self.settings)
+        auth = SamlAuth(self.saml_request, self.settings)
         logout_url = auth.logout(return_to=api.portal.get().absolute_url())
         return self.request.RESPONSE.redirect(logout_url)
+
+
+MD_NS = 'urn:oasis:names:tc:SAML:2.0:metadata'
+DS_NS = 'http://www.w3.org/2000/09/xmldsig#'
+
+ENCRYPTION_METHODS = [
+    'http://www.w3.org/2009/xmlenc11#aes256-gcm',
+    'http://www.w3.org/2001/04/xmlenc#aes256-cbc',
+    'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p',
+]
+
+
+def _postprocess_metadata(metadata):
+    """Fix ACS index and add encryption KeyDescriptor with EncryptionMethod elements."""
+    from lxml import etree
+
+    root = etree.fromstring(metadata if isinstance(metadata, bytes) else metadata.encode())
+
+    spsso = root.find('{%s}SPSSODescriptor' % MD_NS)
+    if spsso is None:
+        return etree.tostring(root, encoding='unicode')
+
+    # 1. Fix AssertionConsumerService index: set to 0
+    for acs in spsso.iter('{%s}AssertionConsumerService' % MD_NS):
+        acs.set('index', '0')
+
+    # 2. Ensure encryption KeyDescriptor exists with EncryptionMethod elements.
+    #    If one already exists (e.g. added by the library), just add the methods.
+    #    Otherwise, copy the cert from the signing KeyDescriptor and add a new one.
+    enc_kd = None
+    signing_kd = None
+    for kd in spsso.findall('{%s}KeyDescriptor' % MD_NS):
+        use = kd.get('use')
+        if use == 'encryption':
+            enc_kd = kd
+        elif use == 'signing':
+            signing_kd = kd
+
+    if enc_kd is None and signing_kd is not None:
+        # Build encryption KeyDescriptor after the signing one, reusing its cert
+        enc_kd = etree.Element('{%s}KeyDescriptor' % MD_NS, use='encryption')
+        key_info = signing_kd.find('{%s}KeyInfo' % DS_NS)
+        if key_info is not None:
+            import copy
+            enc_kd.append(copy.deepcopy(key_info))
+        signing_kd.addnext(enc_kd)
+
+    if enc_kd is not None:
+        existing_algs = {em.get('Algorithm') for em in enc_kd.findall('{%s}EncryptionMethod' % MD_NS)}
+        for alg in ENCRYPTION_METHODS:
+            if alg not in existing_algs:
+                etree.SubElement(enc_kd, '{%s}EncryptionMethod' % MD_NS, Algorithm=alg)
+
+    return etree.tostring(root, encoding='unicode')
 
 
 class MetadataView(BaseSamlView):
     def __call__(self):
         self.request.response.setHeader('X-Theme-Disabled', '1')
-        auth = OneLogin_Saml2_Auth(self.saml_request, self.settings)
+        auth = SamlAuth(self.saml_request, self.settings)
         saml_settings = auth.get_settings()
         metadata = saml_settings.get_sp_metadata()
         errors = saml_settings.validate_metadata(metadata)
 
         if len(errors) == 0:
+            metadata = _postprocess_metadata(metadata)
             self.request.response.setHeader('Content-Type', 'application/xml')
             return metadata
         else:
@@ -171,3 +229,49 @@ class RequireLoginView(BrowserView):
             url += '/insufficient-privileges'
 
         self.request.response.redirect(url)
+
+
+class GenerateSpCertificateView(BrowserView):
+    """Generate a self-signed SP certificate and private key, store them in
+    settings_sp, then redirect back to the IDP metadata management page.
+    """
+
+    def __call__(self):
+        alsoProvides(self.request, IDisableCSRFProtection)
+        try:
+            self.context.generate_sp_certificate()
+            IStatusMessage(self.request).addStatusMessage(
+                'SP certificate generated successfully. '
+                'Register the updated SP metadata with your IDP.',
+                type='info',
+            )
+        except Exception as e:
+            LOGGER.error('Failed to generate SP certificate: %s', e)
+            IStatusMessage(self.request).addStatusMessage(
+                f'Failed to generate SP certificate: {e}',
+                type='error',
+            )
+        return self.request.response.redirect(
+            self.context.absolute_url() + '/idp_metadata'
+        )
+
+
+class RefreshIdPMetadataView(BrowserView):
+    """Trigger an immediate IDP metadata refresh from the stored metadata_url."""
+
+    def __call__(self):
+        alsoProvides(self.request, IDisableCSRFProtection)
+        self.request.response.setHeader('X-Theme-Disabled', '1')
+        self.request.response.setHeader('Content-Type', 'application/json')
+
+        url = self.context.getProperty('metadata_url', '')
+        if not url:
+            self.request.response.setStatus(400)
+            return json.dumps({'status': 'error', 'message': 'No metadata URL configured'})
+
+        success, result = self.context.refresh_metadata()
+        if success:
+            return json.dumps({'status': 'ok', 'refreshed_at': result, 'url': url})
+        else:
+            self.request.response.setStatus(500)
+            return json.dumps({'status': 'error', 'message': result, 'url': url})

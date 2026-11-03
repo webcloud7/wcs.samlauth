@@ -16,6 +16,10 @@ import requests
 import transaction
 
 
+KEYCLOAK_ADMIN_URL = 'http://localhost:8000'
+KEYCLOAK_TEST_REALM = 'saml-test'
+
+
 class FunctionalTesting(TestCase):
     layer = SAMLAUTH_FUNCTIONAL_TESTING
 
@@ -83,6 +87,45 @@ class FunctionalTesting(TestCase):
         soup = BeautifulSoup(data, 'html.parser')
         find = operator.methodcaller(method, query)
         return find(soup)
+
+    @property
+    def sp_entity_id(self):
+        port = os.environ.get('WSGI_SERVER_PORT', '65035')
+        return f'http://localhost:{port}/plone/acl_users/{PLUGIN_ID}/metadata'
+
+    def _get_keycloak_admin_headers(self):
+        token = requests.post(
+            f'{KEYCLOAK_ADMIN_URL}/realms/master/protocol/openid-connect/token',
+            data={
+                'username': 'admin',
+                'password': 'admin',
+                'grant_type': 'password',
+                'client_id': 'admin-cli',
+            }
+        ).json()['access_token']
+        return {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json',
+        }
+
+    def register_sp_cert_with_keycloak(self, cert_b64, signature_algorithm='RSA_SHA256'):
+        """Update the Keycloak SAML client to use the given SP certificate."""
+        headers = self._get_keycloak_admin_headers()
+        clients = requests.get(
+            f'{KEYCLOAK_ADMIN_URL}/admin/realms/{KEYCLOAK_TEST_REALM}/clients',
+            params={'clientId': self.sp_entity_id},
+            headers=headers,
+        ).json()
+        assert clients, f'No Keycloak client found with clientId={self.sp_entity_id}'
+        client = clients[0]
+        client['attributes']['saml.signing.certificate'] = cert_b64
+        client['attributes']['saml.signature.algorithm'] = signature_algorithm
+        response = requests.put(
+            f'{KEYCLOAK_ADMIN_URL}/admin/realms/{KEYCLOAK_TEST_REALM}/clients/{client["id"]}',
+            json=client,
+            headers=headers,
+        )
+        assert response.status_code == 204, f'Failed to update Keycloak client: {response.text}'
 
     def _login_keycloak_test_user(self, came_from=None, url=None):
         if url is None:

@@ -1,9 +1,12 @@
+from cryptography import x509 as crypto_x509
+from cryptography.x509.oid import NameOID
 from plone import api
 from plone.app.testing import TEST_USER_ID
 from wcs.samlauth.tests import FunctionalTesting
 from wcs.samlauth.tests.user_property_adapters import OverrideUserPropertiesMutator
 from wcs.samlauth.tests.user_property_adapters import PhoneUserPropertiesMutator
 from zope.component import getGlobalSiteManager
+import base64
 import json
 import transaction
 
@@ -126,3 +129,86 @@ class TestLoginWithCustomAttr(FunctionalTesting):
             api.portal.get_tool('portal_membership').listMembers())
         )[0]
         self.assertEqual(user.getProperty('fullname'), '123456789')
+
+
+class TestGenerateSpCertificate(FunctionalTesting):
+    """Unit tests for generate_sp_certificate()."""
+
+    def setUp(self):
+        super().setUp()
+        self.grant('Manager')
+
+    def test_generates_and_stores_cert_and_key(self):
+        """Certificate and private key must be stored in settings_sp after generation."""
+        self.plugin.generate_sp_certificate()
+
+        settings = json.loads(self.plugin.getProperty('settings_sp'))
+        self.assertTrue(settings['sp']['x509cert'])
+        self.assertTrue(settings['sp']['privateKey'])
+
+    def test_generated_cert_is_valid_x509(self):
+        """The generated certificate must be a valid X.509 certificate."""
+        self.plugin.generate_sp_certificate()
+
+        cert_b64 = json.loads(self.plugin.getProperty('settings_sp'))['sp']['x509cert']
+        cert = crypto_x509.load_der_x509_certificate(base64.b64decode(cert_b64))
+        cn = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+        self.assertIn('saml', cn)
+
+    def test_generate_overwrites_existing_certificate(self):
+        """Calling generate_sp_certificate() twice produces different certificates."""
+        self.plugin.generate_sp_certificate()
+        cert_first = json.loads(self.plugin.getProperty('settings_sp'))['sp']['x509cert']
+
+        self.plugin.generate_sp_certificate()
+        cert_second = json.loads(self.plugin.getProperty('settings_sp'))['sp']['x509cert']
+
+        self.assertNotEqual(cert_first, cert_second)
+
+
+class TestLoginWithGeneratedSpCertificate(FunctionalTesting):
+    """E2E test: login with authnRequestsSigned=True using a dynamically generated SP certificate.
+
+    The generated certificate is registered with Keycloak via the admin API so
+    that Keycloak can verify the signed AuthnRequest.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.grant('Manager')
+        self.setup_realm(filename='saml-test-realm-sp-signature.json')
+        self.fetch_metadata_from_idp()
+
+    def tearDown(self):
+        super().tearDown()
+        self.restore_default_realm()
+
+    def test_login_with_generated_certificate_and_authn_signed(self):
+        self.plugin.generate_sp_certificate()
+        generated_cert = json.loads(self.plugin.getProperty('settings_sp'))['sp']['x509cert']
+
+        self.register_sp_cert_with_keycloak(generated_cert, signature_algorithm='RSA_SHA256')
+
+        settings = json.loads(self.plugin.getProperty('advanced'))
+        settings['security']['authnRequestsSigned'] = True
+        settings['security']['signatureAlgorithm'] = (
+            'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
+        )
+        self.plugin.manage_changeProperties(advanced=json.dumps(settings))
+        transaction.commit()
+
+        session, url = self._login_keycloak_test_user()
+        self.assertTrue(session.get('__ac'), 'Expect a plone session')
+
+    def test_no_login_without_matching_certificate(self):
+        """Login fails when Keycloak has a different cert than what the SP is using."""
+        self.plugin.generate_sp_certificate()
+
+        settings = json.loads(self.plugin.getProperty('advanced'))
+        settings['security']['authnRequestsSigned'] = True
+        self.plugin.manage_changeProperties(advanced=json.dumps(settings))
+        transaction.commit()
+
+        # Keycloak still has the static test cert → signature verification will fail
+        with self.assertRaises(AssertionError):
+            self._login_keycloak_test_user()
